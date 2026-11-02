@@ -1,0 +1,241 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DbType {
+  MSSQL
+  ORACLE
+  MYSQL
+  POSTGRES
+}
+
+enum SyncKind {
+  CONTACTS
+  OUTBOX
+}
+
+enum MailStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  DEAD
+  CANCELLED
+}
+
+enum MailEvent {
+  QUEUED
+  SENDING
+  SENT
+  FAILED
+  RETRY
+  DEAD
+  CANCELLED
+}
+
+model AdminUser {
+  id           String    @id @default(uuid()) @db.Uuid
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  sessions  AdminSession[]
+  auditLogs AdminAuditLog[]
+
+  @@map("admin_users")
+}
+
+/// One row per refresh-token family; the hash is rotated on every refresh.
+model AdminSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  adminId          String    @map("admin_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash")
+  userAgent        String?   @map("user_agent")
+  ip               String?
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("admin_sessions")
+}
+
+model ErpConnection {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  dbType      DbType    @map("db_type")
+  host        String
+  port        Int
+  database    String
+  username    String
+  passwordEnc String?   @map("password_enc")
+  ssl         Boolean   @default(false)
+  isActive    Boolean   @default(true) @map("is_active")
+  lastTestAt  DateTime? @map("last_test_at")
+  lastTestOk  Boolean?  @map("last_test_ok")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  syncConfigs ErpSyncConfig[]
+  contacts    Contact[]
+  mailQueue   MailQueue[]
+
+  @@map("erp_connections")
+}
+
+model ErpSyncConfig {
+  id              String    @id @default(uuid()) @db.Uuid
+  connectionId    String    @map("connection_id") @db.Uuid
+  kind            SyncKind
+  querySql        String?   @map("query_sql")
+  columnMapping   Json?     @map("column_mapping")
+  pollIntervalSec Int       @default(300) @map("poll_interval_sec")
+  isActive        Boolean   @default(true) @map("is_active")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  lastCursor      String?   @map("last_cursor")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  connection ErpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, kind])
+  @@map("erp_sync_configs")
+}
+
+model Contact {
+  id           String   @id @default(uuid()) @db.Uuid
+  connectionId String   @map("connection_id") @db.Uuid
+  erpRefId     String   @map("erp_ref_id")
+  name         String?
+  email        String?
+  phone        String?
+  company      String?
+  raw          Json?
+  syncedAt     DateTime @default(now()) @map("synced_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  connection ErpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, erpRefId])
+  @@index([email])
+  @@map("contacts")
+}
+
+model SmtpConfig {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  host        String
+  port        Int
+  secure      Boolean  @default(false)
+  username    String?
+  passwordEnc String?  @map("password_enc")
+  fromName    String   @map("from_name")
+  fromEmail   String   @map("from_email")
+  dailyLimit  Int      @default(2000) @map("daily_limit")
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mailQueue MailQueue[]
+
+  @@map("smtp_configs")
+}
+
+model MailTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  name        String
+  subjectTpl  String   @map("subject_tpl")
+  bodyHtmlTpl String   @map("body_html_tpl")
+  bodyTextTpl String?  @map("body_text_tpl")
+  variables   Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mailQueue MailQueue[]
+
+  @@map("mail_templates")
+}
+
+/// connectionId/erpRefId are null for admin test sends that do not originate from an ERP.
+model MailQueue {
+  id              String     @id @default(uuid()) @db.Uuid
+  connectionId    String?    @map("connection_id") @db.Uuid
+  erpRefId        String?    @map("erp_ref_id")
+  templateId      String?    @map("template_id") @db.Uuid
+  templateVersion Int?       @map("template_version")
+  smtpConfigId    String?    @map("smtp_config_id") @db.Uuid
+  toAddrs         String[]   @map("to_addrs")
+  cc              String[]   @default([])
+  bcc             String[]   @default([])
+  variables       Json?
+  renderedSubject String?    @map("rendered_subject")
+  renderedHtml    String?    @map("rendered_html")
+  renderedText    String?    @map("rendered_text")
+  attachments     Json?
+  status          MailStatus @default(PENDING)
+  attempts        Int        @default(0)
+  nextRetryAt     DateTime?  @map("next_retry_at")
+  scheduledAt     DateTime   @default(now()) @map("scheduled_at")
+  sentAt          DateTime?  @map("sent_at")
+  messageId       String?    @map("message_id")
+  lastError       String?    @map("last_error")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  connection ErpConnection? @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  template   MailTemplate?  @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  smtpConfig SmtpConfig?    @relation(fields: [smtpConfigId], references: [id], onDelete: Restrict)
+  logs       MailLog[]
+
+  @@unique([connectionId, erpRefId])
+  @@index([status, nextRetryAt])
+  @@index([createdAt])
+  @@map("mail_queue")
+}
+
+model MailLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  queueId      String    @map("queue_id") @db.Uuid
+  event        MailEvent
+  detail       String?
+  smtpResponse String?   @map("smtp_response")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  queue MailQueue @relation(fields: [queueId], references: [id], onDelete: Cascade)
+
+  @@index([queueId, createdAt])
+  @@map("mail_logs")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String?  @map("admin_id") @db.Uuid
+  action    String
+  target    String?
+  diff      Json?
+  ip        String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt])
+  @@map("admin_audit_logs")
+}
