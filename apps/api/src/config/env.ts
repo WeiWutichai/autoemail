@@ -1,11 +1,39 @@
 import { z } from 'zod';
 
+const DURATION_UNITS_SEC = { s: 1, m: 60, h: 3600, d: 86400 } as const;
+
+/** Parses durations like `15m` / `7d` into seconds. */
+export function parseDurationSec(value: string): number {
+  const match = /^(\d+)([smhd])$/.exec(value.trim());
+  if (!match) {
+    throw new Error(`Invalid duration "${value}" (expected e.g. 30s, 15m, 12h, 7d)`);
+  }
+  return Number(match[1]) * DURATION_UNITS_SEC[match[2] as keyof typeof DURATION_UNITS_SEC];
+}
+
+const durationSec = (fallback: string) =>
+  z
+    .string()
+    .default(fallback)
+    .transform((value, ctx) => {
+      try {
+        return parseDurationSec(value);
+      } catch (err) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: (err as Error).message });
+        return z.NEVER;
+      }
+    });
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(3001),
   WEB_URL: z.string().url().default('http://localhost:3000'),
   DATABASE_URL: z.string().min(1),
   MASTER_KEY: z.string().min(1),
+  JWT_SECRET: z.string().min(32),
+  JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_ACCESS_TTL: durationSec('15m'),
+  JWT_REFRESH_TTL: durationSec('7d'),
 });
 
 export type Env = z.infer<typeof envSchema>;
