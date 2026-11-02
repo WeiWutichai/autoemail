@@ -1,0 +1,88 @@
+name: erp-mail-relay
+
+x-app-env: &app-env
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: postgresql://erpmail:erpmail@postgres:5432/erpmail?schema=public
+    REDIS_URL: redis://redis:6379
+    ATTACHMENT_DIR: /app/storage/attachments
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erpmail
+      POSTGRES_PASSWORD: erpmail
+      POSTGRES_DB: erpmail
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U erpmail -d erpmail']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - '${REDIS_HOST_PORT:-6379}:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    <<: *app-env
+    ports:
+      - '${API_HOST_PORT:-3001}:3001'
+    volumes:
+      - attachments:/app/storage/attachments
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    <<: *app-env
+    volumes:
+      - attachments:/app/storage/attachments
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - '${WEB_HOST_PORT:-3000}:3000'
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  attachments:
