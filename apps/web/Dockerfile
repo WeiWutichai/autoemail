@@ -7,7 +7,8 @@ WORKDIR /repo
 FROM base AS build
 COPY . .
 RUN pnpm install --frozen-lockfile
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG API_URL=http://api:3001
+ENV NEXT_TELEMETRY_DISABLED=1 API_URL=$API_URL
 RUN pnpm --filter @erp-mail/web... build
 
 FROM node:20-alpine AS runtime
