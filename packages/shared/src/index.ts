@@ -1,3 +1,6 @@
 export * from './auth';
 export * from './error';
 export * from './connections';
+export * from './pagination';
+export * from './sync';
+export * from './contacts';
