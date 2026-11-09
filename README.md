@@ -50,6 +50,42 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec api node dist/cli/seed-admin.js
 ```
 
+### Deploy จาก GitHub (ปุ่มเดียว)
+
+เตรียม VPS ครั้งแรก (Ubuntu):
+
+```bash
+# 1) ติดตั้ง Docker แล้วสร้าง user สำหรับ deploy
+curl -fsSL https://get.docker.com | sh
+sudo adduser --disabled-password --gecos "" deploy && sudo usermod -aG docker deploy
+sudo mkdir -p /opt/autoemail && sudo chown deploy:deploy /opt/autoemail
+
+# 2) (บนเครื่องตัวเอง) สร้าง SSH key สำหรับ GitHub Actions แล้วใส่ public key ให้ user deploy
+ssh-keygen -t ed25519 -f autoemail_deploy -N "" -C "github-actions-deploy"
+ssh-copy-id -i autoemail_deploy.pub deploy@<VPS_IP>
+
+# 3) (บน VPS ในฐานะ deploy) clone repo แล้วสร้าง .env
+#    ถ้า repo เป็น private: สร้าง key บน VPS (ssh-keygen -t ed25519) แล้วเพิ่ม .pub เป็น
+#    Deploy key (read-only) ใน GitHub → Settings → Deploy keys และ clone ด้วย git@github.com:WeiWutichai/autoemail.git
+git clone https://github.com/WeiWutichai/autoemail.git /opt/autoemail
+cd /opt/autoemail && cp .env.example .env && nano .env
+```
+
+จากนั้นขอใบรับรองครั้งแรก (ข้อ 1 ด้านบน), รัน `sh deploy/up.sh` แล้วสร้าง admin คนแรก (ข้อ 3 ด้านบน)
+
+ตั้ง Secrets ใน GitHub → Settings → Secrets and variables → Actions:
+
+| Secret | ค่า |
+| --- | --- |
+| `VPS_HOST` | IP หรือชื่อโดเมนของ VPS |
+| `VPS_USER` | `deploy` |
+| `VPS_SSH_KEY` | เนื้อหาไฟล์ private key `autoemail_deploy` ทั้งไฟล์ |
+| `VPS_KNOWN_HOSTS` | ผลของ `ssh-keyscan -p 22 <VPS_IP>` (กันการต่อผิดเครื่อง) |
+| `VPS_PORT` | (ไม่บังคับ) port SSH, default `22` |
+| `VPS_APP_DIR` | (ไม่บังคับ) ที่อยู่ของ repo บน VPS, default `/opt/autoemail` |
+
+Deploy: GitHub → Actions → **Deploy to VPS** → Run workflow — VPS จะ `git pull` branch `main` แล้ว build + restart ทุก service (ถ้า build ไม่ผ่าน ระบบเดิมยังทำงานต่อ)
+
 - เปิดสู่ภายนอกเฉพาะ nginx (80 → redirect, 443); api, web, postgres, redis อยู่ใน network ภายใน
 - certbot ต่ออายุใบรับรองอัตโนมัติ และ nginx reload ทุก 6 ชั่วโมง
 - ถ้า api ใน Docker ต้องต่อ ERP ในวง LAN ให้ใส่ IP / ชื่อเครื่อง ERP (ไม่ใช่ `localhost`)
