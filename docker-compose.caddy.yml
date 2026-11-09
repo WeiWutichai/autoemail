@@ -1,0 +1,39 @@
+# Production overlay for a host that already runs a shared reverse proxy (e.g. Caddy)
+# on ports 80/443. Nothing is published; only `web` joins the proxy's Docker network
+# under the alias `autoemail-web`, and the proxy terminates HTTPS:
+#
+#   autoemail.example.com {
+#       reverse_proxy autoemail-web:3000
+#   }
+#
+# Select it on the VPS by putting this line in .env (deploy/up.sh honors it):
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.caddy.yml
+# PROXY_NETWORK names the proxy's existing network (default: deploy_internal).
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  api:
+    ports: !reset []
+    environment:
+      NODE_ENV: production
+
+  worker:
+    environment:
+      NODE_ENV: production
+
+  web:
+    ports: !reset []
+    networks:
+      default:
+      proxy:
+        aliases:
+          - autoemail-web
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-deploy_internal}
+    external: true

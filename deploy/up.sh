@@ -10,7 +10,13 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+# COMPOSE_FILE in .env selects the overlay (e.g. docker-compose.caddy.yml behind a shared proxy);
+# otherwise use the nginx + certbot overlay.
+if grep -q '^COMPOSE_FILE=' .env; then
+  COMPOSE="docker compose"
+else
+  COMPOSE="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+fi
 
 # Images are built before any container is replaced, so a failed build leaves the running stack untouched.
 $COMPOSE up -d --build --remove-orphans
