@@ -7,6 +7,10 @@ const MESSAGES: Record<string, string> = {
   CANNOT_DEACTIVATE_SELF: 'ไม่สามารถปิดการใช้งานบัญชีของตัวเองได้',
   ADMIN_USER_NOT_FOUND: 'ไม่พบผู้ดูแลระบบนี้',
   VALIDATION_ERROR: 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง',
+  CONNECTION_NOT_FOUND: 'ไม่พบ connection นี้',
+  CONNECTION_NAME_TAKEN: 'ชื่อ connection นี้ถูกใช้แล้ว',
+  CONNECTION_IN_USE:
+    'connection นี้มีการตั้งค่าดึงข้อมูลหรือประวัติเมลผูกอยู่ จึงลบไม่ได้ ให้ปิดการใช้งานแทน',
 };
 
 /** Thai message for an error thrown by the API client. */
