@@ -125,7 +125,7 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
   return (
     <Dialog open={target !== undefined} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <form onSubmit={onSubmit} noValidate className="space-y-4">
+        <form onSubmit={onSubmit} noValidate className="min-w-0 space-y-4">
           <DialogHeader>
             <DialogTitle>{editing ? `แก้ไข ${editing.name}` : 'เพิ่มการดึงข้อมูล'}</DialogTitle>
             <DialogDescription>

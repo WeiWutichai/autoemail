@@ -16,7 +16,7 @@ function cell(value: unknown): string {
 /** Result of "ตรวจ query": missing required columns + the first rows. */
 export function QueryPreview({ preview }: { preview: QueryPreviewResult }) {
   return (
-    <div className="space-y-2 rounded-md border p-3">
+    <div className="min-w-0 space-y-2 rounded-md border p-3">
       <p className="text-sm">
         ได้ {preview.rowCount.toLocaleString('th-TH')} แถว ใน {preview.durationMs} ms
         {preview.rowCount > preview.rows.length && ` (แสดง ${preview.rows.length} แถวแรก)`}
