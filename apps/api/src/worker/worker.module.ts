@@ -5,6 +5,8 @@ import { CryptoModule } from '../common/crypto/crypto.module';
 import { validateWorkerEnv } from '../config/env';
 import { ErpModule } from '../erp/erp.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { SyncModule } from '../sync/sync.module';
+import { SyncScheduler } from './sync.scheduler';
 
 /** Root module of the worker process (no HTTP server). */
 @Module({
@@ -23,6 +25,8 @@ import { PrismaModule } from '../prisma/prisma.module';
     PrismaModule,
     CryptoModule,
     ErpModule,
+    SyncModule,
   ],
+  providers: [SyncScheduler],
 })
 export class WorkerModule {}

@@ -45,7 +45,7 @@ export const envSchema = baseEnvSchema.extend({
 export const workerEnvSchema = baseEnvSchema.extend({
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   /** How often the worker looks for sync configs that are due. */
-  SYNC_TICK_SEC: z.coerce.number().int().min(5).max(3600).default(30),
+  SYNC_TICK_SEC: z.coerce.number().int().min(1).max(3600).default(30),
 });
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;
