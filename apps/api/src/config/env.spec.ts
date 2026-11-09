@@ -20,6 +20,8 @@ describe('validateEnv (api)', () => {
     expect(env.NODE_ENV).toBe('development');
     expect(env.JWT_ACCESS_TTL).toBe(900);
     expect(env.JWT_REFRESH_TTL).toBe(604800);
+    expect(env.ERP_QUERY_TIMEOUT_MS).toBe(10000);
+    expect(env.ERP_MAX_CONNECTIONS).toBe(2);
   });
 
   it('rejects malformed TTLs', () => {

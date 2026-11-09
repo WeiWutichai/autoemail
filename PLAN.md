@@ -31,10 +31,10 @@
 - [x] unit test: query PR/PO จริงผ่าน, ทุก keyword ต้องห้ามถูกปฏิเสธ, keyword ใน string/comment ไม่ทำให้ผิด
 
 ### T4 — ERP DataSource factory
-- [ ] ติดตั้ง `knex` + driver `tedious` (SQL Server), `pg`, `mysql2`, `oracledb` (thin mode)
-- [ ] `apps/api/src/erp/erp-datasource.factory.ts`: สร้าง Knex instance ต่อ connection (cache ตาม `id` + `updatedAt`, ปิด pool เก่าเมื่อ config เปลี่ยน), pool max `ERP_MAX_CONNECTIONS`, timeout `ERP_QUERY_TIMEOUT_MS`, `testConnection()` รัน `SELECT 1` (Oracle: `FROM DUAL`), ปิดทุก pool ตอน shutdown
-- [ ] เพิ่ม `ERP_QUERY_TIMEOUT_MS`, `ERP_MAX_CONNECTIONS` ใน env schema ของ api
-- [ ] unit test: config ที่ส่งให้ Knex ต่อ db type (รวม `encrypt` / `trustServerCertificate`), cache / invalidate
+- [x] ติดตั้ง `knex` + driver `tedious` (SQL Server), `pg`, `mysql2`, `oracledb` (thin mode)
+- [x] `apps/api/src/erp/erp-datasource.factory.ts`: สร้าง Knex instance ต่อ connection (cache ตาม `id` + `updatedAt`, ปิด pool เก่าเมื่อ config เปลี่ยน), pool max `ERP_MAX_CONNECTIONS`, timeout `ERP_QUERY_TIMEOUT_MS`, `testConnection()` รัน `SELECT 1` (Oracle: `FROM DUAL`), ปิดทุก pool ตอน shutdown
+- [x] เพิ่ม `ERP_QUERY_TIMEOUT_MS`, `ERP_MAX_CONNECTIONS` ใน env schema ของ api
+- [x] unit test: config ที่ส่งให้ Knex ต่อ db type (รวม `encrypt` / `trustServerCertificate`), cache / invalidate
 
 ### T5 — Connections API
 - [ ] `ConnectionsModule`: `GET /connections`, `GET /connections/:id`, `POST /connections`, `PATCH /connections/:id`, `DELETE /connections/:id`, `POST /connections/:id/test` (บันทึก `lastTestAt`, `lastTestOk`)

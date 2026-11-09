@@ -34,6 +34,8 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   JWT_ACCESS_TTL: durationSec('15m'),
   JWT_REFRESH_TTL: durationSec('7d'),
+  ERP_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  ERP_MAX_CONNECTIONS: z.coerce.number().int().min(1).max(20).default(2),
 });
 
 export type Env = z.infer<typeof envSchema>;
