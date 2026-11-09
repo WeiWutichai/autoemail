@@ -140,19 +140,21 @@ model Contact {
 }
 
 model SmtpConfig {
-  id          String   @id @default(uuid()) @db.Uuid
-  name        String   @unique
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
   host        String
   port        Int
-  secure      Boolean  @default(false)
+  secure      Boolean   @default(false)
   username    String?
-  passwordEnc String?  @map("password_enc")
-  fromName    String   @map("from_name")
-  fromEmail   String   @map("from_email")
-  dailyLimit  Int      @default(2000) @map("daily_limit")
-  isDefault   Boolean  @default(false) @map("is_default")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  passwordEnc String?   @map("password_enc")
+  fromName    String    @map("from_name")
+  fromEmail   String    @map("from_email")
+  dailyLimit  Int       @default(2000) @map("daily_limit")
+  isDefault   Boolean   @default(false) @map("is_default")
+  lastTestAt  DateTime? @map("last_test_at")
+  lastTestOk  Boolean?  @map("last_test_ok")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
   mailQueue MailQueue[]
 
@@ -173,8 +175,26 @@ model MailTemplate {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   mailQueue MailQueue[]
+  versions  MailTemplateVersion[]
 
   @@map("mail_templates")
+}
+
+/// Snapshot of a template's content for every saved version.
+model MailTemplateVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  version     Int
+  subjectTpl  String   @map("subject_tpl")
+  bodyHtmlTpl String   @map("body_html_tpl")
+  bodyTextTpl String?  @map("body_text_tpl")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  template MailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, version])
+  @@map("mail_template_versions")
 }
 
 /// connectionId/erpRefId are null for admin test sends that do not originate from an ERP.
