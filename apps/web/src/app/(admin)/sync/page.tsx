@@ -31,6 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useConnections } from '@/lib/connections';
 import { errorMessage } from '@/lib/error-messages';
 import { formatInterval } from '@/lib/format';
+import { useSmtpConfigs } from '@/lib/smtp';
 import {
   useCreateSyncConfig,
   useDeleteSyncConfig,
@@ -43,14 +44,16 @@ import {
   emptySyncForm,
   formFromSyncConfig,
   parseMapping,
+  PR_PO_QUERY,
   SYNC_KIND_LABELS,
   toCreateSyncInput,
   toUpdateSyncInput,
   type SyncForm,
 } from '@/lib/sync-form';
+import { useTemplates } from '@/lib/templates';
 
 /** Kinds that can be created from this page. */
-const AVAILABLE_KINDS: SyncKind[] = ['CONTACTS'];
+const AVAILABLE_KINDS: SyncKind[] = ['OUTBOX', 'CONTACTS'];
 
 const KIND_HINTS: Record<SyncKind, string> = {
   CONTACTS:
@@ -72,8 +75,10 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
     (c) => c.isActive || c.id === editing?.connectionId,
   );
   const [form, setForm] = useState<SyncForm>(() =>
-    editing ? formFromSyncConfig(editing) : emptySyncForm(),
+    editing ? formFromSyncConfig(editing) : emptySyncForm('', 'OUTBOX'),
   );
+  const { data: templates } = useTemplates();
+  const { data: smtpConfigs } = useSmtpConfigs();
   const [error, setError] = useState<string | null>(null);
   const set = (patch: Partial<SyncForm>) => setForm((f) => ({ ...f, ...patch }));
   const pending = create.isPending || update.isPending;
@@ -191,7 +196,9 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
               spellCheck={false}
               className="font-mono text-xs"
               placeholder={
-                'SELECT DeptCode AS erp_ref_id, Email AS email, DeptName AS name\nFROM Z_MaIL'
+                form.kind === 'OUTBOX'
+                  ? 'SELECT DocNo AS erp_ref_id, Email AS to_email, ...\nFROM ...'
+                  : 'SELECT DeptCode AS erp_ref_id, Email AS email, DeptName AS name\nFROM Z_MaIL'
               }
               value={form.querySql}
               onChange={(e) => {
@@ -203,7 +210,67 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
             <p className="text-xs text-muted-foreground">
               ต้องมี: {REQUIRED_COLUMNS[form.kind].join(', ')}
             </p>
+            {form.kind === 'OUTBOX' && (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                onClick={() => {
+                  set({ querySql: PR_PO_QUERY });
+                  preview.reset();
+                }}
+              >
+                ใส่ query PR/PO รออนุมัติ (SQL Server)
+              </Button>
+            )}
           </div>
+
+          {form.kind === 'OUTBOX' && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="sync-template">Template</Label>
+                <NativeSelect
+                  id="sync-template"
+                  value={form.templateId}
+                  onChange={(e) => set({ templateId: e.target.value })}
+                >
+                  <option value="">— เลือก —</option>
+                  {templates?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.code} — {t.name}
+                      {t.isActive ? '' : ' (ปิดใช้งาน)'}
+                    </option>
+                  ))}
+                </NativeSelect>
+                <p className="text-xs text-muted-foreground">
+                  ถ้า query มีคอลัมน์ template_code ระบบจะใช้ template ตามแถวนั้นแทน
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="sync-smtp">ส่งผ่าน SMTP</Label>
+                <NativeSelect
+                  id="sync-smtp"
+                  value={form.smtpConfigId}
+                  onChange={(e) => set({ smtpConfigId: e.target.value })}
+                >
+                  <option value="">SMTP ค่าเริ่มต้น</option>
+                  {smtpConfigs?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </NativeSelect>
+              </div>
+            </div>
+          )}
+          {form.kind === 'OUTBOX' && !editing && (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+              เมื่อเปิดใช้งาน รอบแรกจะส่งเมลสำหรับทุกแถวที่ query คืนมา (เช่น
+              เอกสารที่รออนุมัติอยู่ทั้งหมดตอนนี้) หลังจากนั้นจะส่งเฉพาะแถวใหม่ — แต่ละ erp_ref_id
+              ส่งครั้งเดียว กด &quot;ตรวจ query&quot; เพื่อดูจำนวนก่อน
+            </p>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="sync-mapping">Column mapping (ไม่บังคับ)</Label>
@@ -306,7 +373,7 @@ export default function SyncPage() {
   const runNow = async (config: SyncConfigDto) => {
     setRunningId(config.id);
     try {
-      toastSyncResult(config.name, await run.mutateAsync(config.id));
+      toastSyncResult(config.name, config.kind, await run.mutateAsync(config.id));
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
@@ -367,7 +434,14 @@ export default function SyncPage() {
             <TableRow key={config.id}>
               <TableCell className="font-medium">{config.name}</TableCell>
               <TableCell>{config.connectionName}</TableCell>
-              <TableCell>{SYNC_KIND_LABELS[config.kind]}</TableCell>
+              <TableCell>
+                <div>{SYNC_KIND_LABELS[config.kind]}</div>
+                {config.kind === 'OUTBOX' && (
+                  <div className="text-xs text-muted-foreground">
+                    {config.templateCode} · {config.smtpConfigName ?? 'SMTP ค่าเริ่มต้น'}
+                  </div>
+                )}
+              </TableCell>
               <TableCell>{formatInterval(config.pollIntervalSec)}</TableCell>
               <TableCell>
                 {config.isActive ? (

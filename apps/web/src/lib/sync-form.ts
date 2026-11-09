@@ -23,6 +23,10 @@ export interface SyncForm {
   /** Minutes, as typed. */
   intervalMin: string;
   isActive: boolean;
+  /** OUTBOX: '' = none. */
+  templateId: string;
+  /** OUTBOX: '' = default SMTP. */
+  smtpConfigId: string;
 }
 
 export type FormResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -36,6 +40,8 @@ export function emptySyncForm(connectionId = '', kind: SyncKind = 'CONTACTS'): S
     mapping: '',
     intervalMin: '5',
     isActive: true,
+    templateId: '',
+    smtpConfigId: '',
   };
 }
 
@@ -56,6 +62,8 @@ export function formFromSyncConfig(config: SyncConfigDto): SyncForm {
     mapping: formatMapping(config.columnMapping),
     intervalMin: String(Math.round(config.pollIntervalSec / 60)),
     isActive: config.isActive,
+    templateId: config.templateId ?? '',
+    smtpConfigId: config.smtpConfigId ?? '',
   };
 }
 
@@ -90,6 +98,7 @@ const FIELD_ERRORS: Record<string, string> = {
   querySql: 'กรุณากรอก SQL query',
   pollIntervalSec: 'รอบเวลาต้องอยู่ระหว่าง 1 นาที ถึง 1 วัน (1440 นาที)',
   columnMapping: 'ชื่อคอลัมน์ใน mapping ใช้ได้เฉพาะ A-Z, 0-9 และ _',
+  templateId: 'กรุณาเลือก template',
 };
 
 function firstError(issues: { path: (string | number)[] }[]): string {
@@ -108,6 +117,8 @@ export function toCreateSyncInput(form: SyncForm): FormResult<CreateSyncConfigIn
     columnMapping: mapping.data,
     pollIntervalSec: intervalSec(form.intervalMin),
     isActive: form.isActive,
+    templateId: form.kind === 'OUTBOX' ? form.templateId || null : null,
+    smtpConfigId: form.kind === 'OUTBOX' ? form.smtpConfigId || null : null,
   });
   return parsed.success
     ? { ok: true, data: parsed.data }
@@ -130,6 +141,13 @@ export function toUpdateSyncInput(
   const sec = intervalSec(form.intervalMin);
   if (sec !== original.pollIntervalSec) candidate.pollIntervalSec = sec;
   if (form.isActive !== original.isActive) candidate.isActive = form.isActive;
+  if (original.kind === 'OUTBOX') {
+    if (!form.templateId) return { ok: false, error: FIELD_ERRORS.templateId };
+    if (form.templateId !== original.templateId) candidate.templateId = form.templateId;
+    if ((form.smtpConfigId || null) !== original.smtpConfigId) {
+      candidate.smtpConfigId = form.smtpConfigId || null;
+    }
+  }
   if (Object.keys(candidate).length === 0) return { ok: true, data: null };
 
   const parsed = updateSyncConfigSchema.safeParse(candidate);
@@ -137,3 +155,55 @@ export function toUpdateSyncInput(
     ? { ok: true, data: parsed.data }
     : { ok: false, error: firstError(parsed.error.issues) };
 }
+
+/** docs/erp-queries/pr-po-pending-approval.sql (SQL Server) — PR / PO waiting for approval. */
+export const PR_PO_QUERY = `SELECT
+    d.doc_type + ':' + d.order_no + ':' + LOWER(LTRIM(RTRIM(m.Email))) AS erp_ref_id,
+    LTRIM(RTRIM(m.Email)) AS to_email,
+    d.doc_type, d.status, d.order_no, d.doc_date, d.supplier_code, d.supplier_name,
+    d.dept_code, d.department, d.approved, d.approved_by,
+    m.Approved AS mail_approved
+FROM (
+    SELECT 'PR' AS doc_type,
+        CASE
+            WHEN ISNULL(S.IsClosed, 0) = 1 THEN N'ยกเลิกเอกสาร'
+            WHEN ISNULL(S.IsComplete, 0) = 1 THEN N'ปิดงาน'
+            WHEN ISNULL(S.IsApproved, 0) = 1 THEN N'อนุมัติเอกสาร'
+            WHEN ISNULL(S.IsCheck, 0) = 1 THEN N'ตรวจสอบเอกสาร'
+            ELSE N'รอการอนุมัติ'
+        END AS status,
+        S.PRNo AS order_no,
+        CONVERT(DATE, S.PRDate) AS doc_date,
+        '' AS supplier_code,
+        '' AS supplier_name,
+        ISNULL(S.DeptCode, ' ') AS dept_code,
+        ISNULL(S.Department, ' ') AS department,
+        ISNULL(S.IsApproved, 0) AS approved,
+        ISNULL(S.IsApprovedBy, ' ') AS approved_by
+    FROM PurchaseRequisitionHdr S WITH (NOLOCK)
+    WHERE S.IsApproved = 0 AND S.IsComplete <> 1 AND S.IsClosed <> 1
+
+    UNION ALL
+
+    SELECT 'PO' AS doc_type,
+        CASE
+            WHEN ISNULL(S.IsClosed, 0) = 1 THEN N'ยกเลิกเอกสาร'
+            WHEN ISNULL(S.IsComplete, 0) = 1 THEN N'ปิดงาน'
+            WHEN ISNULL(S.IsApproved, 0) = 1 THEN N'อนุมัติเอกสาร'
+            WHEN ISNULL(S.IsCheck, 0) = 1 THEN N'ตรวจสอบเอกสาร'
+            ELSE N'รอการอนุมัติ'
+        END AS status,
+        S.PONumber AS order_no,
+        CONVERT(DATE, S.PODate) AS doc_date,
+        S.SupplierCode AS supplier_code,
+        S.SupplierName AS supplier_name,
+        ISNULL(S.DeptCode, ' ') AS dept_code,
+        ISNULL(S.Department, ' ') AS department,
+        ISNULL(S.IsApproved, 0) AS approved,
+        ISNULL(S.Appr_By, ' ') AS approved_by
+    FROM PurchaseOrderHdr S WITH (NOLOCK)
+    WHERE S.IsApproved = 0 AND S.IsComplete <> 1 AND S.IsClosed <> 1
+) d
+INNER JOIN Z_MaIL m WITH (NOLOCK) ON m.DeptCode = d.dept_code
+WHERE d.dept_code <> ' '
+  AND LTRIM(RTRIM(ISNULL(m.Email, ''))) <> ''`;

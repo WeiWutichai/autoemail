@@ -3,6 +3,7 @@ import {
   emptySyncForm,
   formFromSyncConfig,
   parseMapping,
+  PR_PO_QUERY,
   toCreateSyncInput,
   toUpdateSyncInput,
 } from './sync-form';
@@ -58,6 +59,32 @@ describe('toCreateSyncInput', () => {
       ok: false,
       error: 'กรุณาเลือก connection',
     });
+  });
+});
+
+describe('outbox configs', () => {
+  it('requires a template and sends null for the default SMTP', () => {
+    const form = {
+      ...emptySyncForm(connectionId, 'OUTBOX'),
+      name: 'PR/PO',
+      querySql: PR_PO_QUERY,
+    };
+    expect(toCreateSyncInput(form)).toEqual({ ok: false, error: 'กรุณาเลือก template' });
+    expect(toCreateSyncInput({ ...form, templateId: connectionId })).toMatchObject({
+      ok: true,
+      data: { templateId: connectionId, smtpConfigId: null },
+    });
+  });
+
+  it('only sends changed template / SMTP on update', () => {
+    const outbox = { ...config, kind: 'OUTBOX' as const, templateId: connectionId };
+    const form = formFromSyncConfig(outbox);
+    expect(toUpdateSyncInput(form, outbox)).toEqual({ ok: true, data: null });
+    expect(toUpdateSyncInput({ ...form, smtpConfigId: config.id }, outbox)).toEqual({
+      ok: true,
+      data: { smtpConfigId: config.id },
+    });
+    expect(toUpdateSyncInput({ ...form, templateId: '' }, outbox).ok).toBe(false);
   });
 });
 

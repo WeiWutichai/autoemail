@@ -1,7 +1,14 @@
-import type { SyncConfigDto, SyncRunResponse } from '@erp-mail/shared';
+import type { SyncConfigDto, SyncKind, SyncRunResponse, SyncRunResult } from '@erp-mail/shared';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { formatDateTime } from '@/lib/format';
+
+/** "ดึง 10 · ใหม่ 2 · อัปเดต 8" (contacts) or "ดึง 10 · เข้าคิว 2 · ส่งไปแล้ว 8" (outbox). */
+export function summarize(kind: SyncKind, r: SyncRunResult): string {
+  return kind === 'OUTBOX'
+    ? `ดึง ${r.fetched} แถว · เข้าคิวใหม่ ${r.created} · เคยส่งแล้ว ${r.skipped}`
+    : `ดึง ${r.fetched} แถว · ใหม่ ${r.created} · อัปเดต ${r.updated} · ข้าม ${r.skipped}`;
+}
 
 /** Last run summary shown in tables. */
 export function SyncStatus({ config }: { config: SyncConfigDto }) {
@@ -26,7 +33,7 @@ export function SyncStatus({ config }: { config: SyncConfigDto }) {
       ) : (
         r && (
           <div className="text-xs text-muted-foreground">
-            ดึง {r.fetched} · ใหม่ {r.created} · อัปเดต {r.updated}
+            {summarize(config.kind, r)}
             {r.errors > 0 && <span className="text-destructive"> · ผิดพลาด {r.errors}</span>}
           </div>
         )
@@ -36,13 +43,13 @@ export function SyncStatus({ config }: { config: SyncConfigDto }) {
 }
 
 /** Toast for a "Sync now" response. */
-export function toastSyncResult(name: string, res: SyncRunResponse): void {
+export function toastSyncResult(name: string, kind: SyncKind, res: SyncRunResponse): void {
   if (!res.ok || !res.result) {
     toast.error(`${name}: ดึงข้อมูลไม่สำเร็จ`, { description: res.error, duration: 15000 });
     return;
   }
   const r = res.result;
-  const summary = `ดึง ${r.fetched} แถว · ใหม่ ${r.created} · อัปเดต ${r.updated} · ข้าม ${r.skipped}`;
+  const summary = summarize(kind, r);
   if (r.errors > 0) {
     toast.warning(`${name}: ${summary} · ผิดพลาด ${r.errors}`, {
       description: r.messages.join('\n'),

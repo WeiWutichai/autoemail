@@ -118,7 +118,7 @@ function ContactSyncCard() {
   const runNow = async (config: SyncConfigDto) => {
     setRunningId(config.id);
     try {
-      toastSyncResult(config.name, await run.mutateAsync(config.id));
+      toastSyncResult(config.name, config.kind, await run.mutateAsync(config.id));
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
