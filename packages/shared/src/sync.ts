@@ -111,3 +111,11 @@ export const queryPreviewResultSchema = z.object({
   durationMs: z.number().int().nonnegative(),
 });
 export type QueryPreviewResult = z.infer<typeof queryPreviewResultSchema>;
+
+/** Response of "Sync now"; a failed run still returns 200 with `ok: false`. */
+export const syncRunResponseSchema = z.object({
+  ok: z.boolean(),
+  result: syncRunResultSchema.nullable(),
+  error: z.string().optional(),
+});
+export type SyncRunResponse = z.infer<typeof syncRunResponseSchema>;

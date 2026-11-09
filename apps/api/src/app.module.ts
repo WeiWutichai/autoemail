@@ -31,6 +31,8 @@ import { SyncConfigsModule } from './sync/sync-configs.module';
     AuthModule,
     AdminUsersModule,
     ConnectionsModule,
+    SyncConfigsModule,
+    ContactsModule,
   ],
 })
 export class AppModule {}
