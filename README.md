@@ -86,6 +86,8 @@ cd /opt/autoemail && cp .env.example .env && nano .env
 
 Deploy: GitHub → Actions → **Deploy to VPS** → Run workflow — VPS จะ `git pull` branch `main` แล้ว build + restart ทุก service (ถ้า build ไม่ผ่าน ระบบเดิมยังทำงานต่อ)
 
+ถ้า VPS มี reverse proxy อื่น (เช่น Caddy) ใช้ port 80/443 อยู่แล้ว: ใส่ `COMPOSE_FILE=docker-compose.yml:docker-compose.caddy.yml` และ `PROXY_NETWORK=<network ของ proxy>` ใน `.env` (ไม่ต้องใช้ nginx/certbot) แล้วให้ proxy ส่งต่อโดเมนไปที่ `autoemail-web:3000`
+
 Deploy จากเครื่องตัวเอง (ไม่ผ่าน GitHub): วาง key และ `vps.env` (ดูตัวอย่าง `deploy/vps.env.example`) ไว้ใน `deploy/private/` ซึ่ง git ไม่เก็บ, `ssh` เข้า VPS ด้วยมือ 1 ครั้งเพื่อยืนยัน host key แล้วรัน `sh deploy/deploy-local.sh`
 
 - เปิดสู่ภายนอกเฉพาะ nginx (80 → redirect, 443); api, web, postgres, redis อยู่ใน network ภายใน
