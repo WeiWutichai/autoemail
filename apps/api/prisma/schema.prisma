@@ -73,20 +73,21 @@ model AdminSession {
 }
 
 model ErpConnection {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String    @unique
-  dbType      DbType    @map("db_type")
-  host        String
-  port        Int
-  database    String
-  username    String
-  passwordEnc String?   @map("password_enc")
-  ssl         Boolean   @default(false)
-  isActive    Boolean   @default(true) @map("is_active")
-  lastTestAt  DateTime? @map("last_test_at")
-  lastTestOk  Boolean?  @map("last_test_ok")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    @unique
+  dbType          DbType    @map("db_type")
+  host            String
+  port            Int
+  database        String
+  username        String
+  passwordEnc     String?   @map("password_enc")
+  ssl             Boolean   @default(false)
+  trustServerCert Boolean   @default(false) @map("trust_server_cert")
+  isActive        Boolean   @default(true) @map("is_active")
+  lastTestAt      DateTime? @map("last_test_at")
+  lastTestOk      Boolean?  @map("last_test_ok")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   syncConfigs ErpSyncConfig[]
   contacts    Contact[]
