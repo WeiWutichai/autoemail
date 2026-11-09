@@ -1,0 +1,64 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import {
+  createErpConnectionSchema,
+  updateErpConnectionSchema,
+  type CreateErpConnectionInput,
+  type ErpConnectionDto,
+  type TestConnectionResult,
+  type UpdateErpConnectionInput,
+} from '@erp-mail/shared';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { ConnectionsService } from './connections.service';
+
+@Controller('connections')
+export class ConnectionsController {
+  constructor(private readonly connections: ConnectionsService) {}
+
+  @Get()
+  list(): Promise<ErpConnectionDto[]> {
+    return this.connections.list();
+  }
+
+  @Get(':id')
+  get(@Param('id', ParseUUIDPipe) id: string): Promise<ErpConnectionDto> {
+    return this.connections.get(id);
+  }
+
+  @Post()
+  create(
+    @Body(new ZodValidationPipe(createErpConnectionSchema)) body: CreateErpConnectionInput,
+  ): Promise<ErpConnectionDto> {
+    return this.connections.create(body);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateErpConnectionSchema)) body: UpdateErpConnectionInput,
+  ): Promise<ErpConnectionDto> {
+    return this.connections.update(id, body);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    return this.connections.remove(id);
+  }
+
+  @Post(':id/test')
+  @HttpCode(HttpStatus.OK)
+  test(@Param('id', ParseUUIDPipe) id: string): Promise<TestConnectionResult> {
+    return this.connections.test(id);
+  }
+}

@@ -37,10 +37,10 @@
 - [x] unit test: config ที่ส่งให้ Knex ต่อ db type (รวม `encrypt` / `trustServerCertificate`), cache / invalidate
 
 ### T5 — Connections API
-- [ ] `ConnectionsModule`: `GET /connections`, `GET /connections/:id`, `POST /connections`, `PATCH /connections/:id`, `DELETE /connections/:id`, `POST /connections/:id/test` (บันทึก `lastTestAt`, `lastTestOk`)
-- [ ] password เข้ารหัสด้วย `CryptoService`; ไม่คืน `passwordEnc` — ใช้ `hasPassword`
-- [ ] error ที่ได้จาก driver ตอน test ต้องไม่มี password / connection string
-- [ ] unit test service + e2e (ใช้ Postgres test เป็น "ERP" ชนิด POSTGRES เพื่อทดสอบ driver จริง)
+- [x] `ConnectionsModule`: `GET /connections`, `GET /connections/:id`, `POST /connections`, `PATCH /connections/:id`, `DELETE /connections/:id`, `POST /connections/:id/test` (บันทึก `lastTestAt`, `lastTestOk`)
+- [x] password เข้ารหัสด้วย `CryptoService`; ไม่คืน `passwordEnc` — ใช้ `hasPassword`
+- [x] error ที่ได้จาก driver ตอน test ต้องไม่มี password / connection string
+- [x] unit test service + e2e (ใช้ Postgres test เป็น "ERP" ชนิด POSTGRES เพื่อทดสอบ driver จริง)
 
 ### T6 — Web `/connections`
 - [ ] ตาราง connection + สถานะ test ล่าสุด, ฟอร์มเพิ่ม/แก้ (port default ตามประเภท DB, password แสดง •••• และเว้นว่าง = คงเดิม), ปุ่ม Test, เปิด/ปิดใช้งาน, ลบ (พร้อมยืนยัน)

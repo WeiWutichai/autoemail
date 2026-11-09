@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AdminUsersModule } from './admin-users/admin-users.module';
 import { AuthModule } from './auth/auth.module';
 import { CryptoModule } from './common/crypto/crypto.module';
+import { ConnectionsModule } from './connections/connections.module';
 import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -27,6 +28,7 @@ import { PrismaModule } from './prisma/prisma.module';
     HealthModule,
     AuthModule,
     AdminUsersModule,
+    ConnectionsModule,
   ],
 })
 export class AppModule {}
