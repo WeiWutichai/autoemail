@@ -40,6 +40,7 @@ function setup() {
       delete: vi.fn(),
     },
     mailQueue: { count: vi.fn().mockResolvedValue(0) },
+    erpSyncConfig: { count: vi.fn().mockResolvedValue(0) },
     $transaction: vi.fn((fn: (t: typeof tx) => unknown) => fn(tx)),
   };
   const crypto = { encrypt: vi.fn((v: string) => `enc:${v}`) };
@@ -104,7 +105,7 @@ describe('SmtpConfigsService', () => {
     });
     prisma.mailQueue.count.mockResolvedValue(2);
     await expect(service.remove('s1')).rejects.toMatchObject({
-      response: { code: 'SMTP_IN_USE', details: { mails: 2 } },
+      response: { code: 'SMTP_IN_USE', details: { mails: 2, syncConfigs: 0 } },
     });
   });
 

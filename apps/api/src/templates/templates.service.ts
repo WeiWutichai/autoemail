@@ -131,12 +131,15 @@ export class TemplatesService {
 
   async remove(id: string): Promise<void> {
     await this.findOrThrow(id);
-    const mails = await this.prisma.mailQueue.count({ where: { templateId: id } });
-    if (mails > 0) {
+    const [mails, syncConfigs] = await Promise.all([
+      this.prisma.mailQueue.count({ where: { templateId: id } }),
+      this.prisma.erpSyncConfig.count({ where: { templateId: id } }),
+    ]);
+    if (mails + syncConfigs > 0) {
       throw new ConflictException({
         code: 'TEMPLATE_IN_USE',
-        message: 'Template has been used for mails; deactivate it instead',
-        details: { mails },
+        message: 'Template is used by mails or sync configs; deactivate it instead',
+        details: { mails, syncConfigs },
       });
     }
     await this.prisma.mailTemplate.delete({ where: { id } });

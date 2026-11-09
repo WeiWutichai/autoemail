@@ -9,6 +9,8 @@ function setup() {
   const prisma = {
     erpConnection: { findUnique: vi.fn().mockResolvedValue(conn) },
     erpSyncConfig: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    mailTemplate: { findUnique: vi.fn().mockResolvedValue({ id: 't1' }) },
+    smtpConfig: { findUnique: vi.fn().mockResolvedValue(null) },
   };
   const datasources = { query: vi.fn() };
   const service = new SyncConfigsService(
@@ -26,6 +28,8 @@ const input = {
   columnMapping: null,
   pollIntervalSec: 300,
   isActive: true,
+  templateId: null,
+  smtpConfigId: null,
 };
 
 describe('SyncConfigsService', () => {
@@ -33,6 +37,21 @@ describe('SyncConfigsService', () => {
     const { prisma, service } = setup();
     await expect(service.create({ ...input, querySql: 'EXEC sp_who' })).rejects.toMatchObject({
       response: { code: 'SQL_NOT_ALLOWED' },
+    });
+    expect(prisma.erpSyncConfig.create).not.toHaveBeenCalled();
+  });
+
+  it('requires an existing template for outbox configs and an existing SMTP config', async () => {
+    const { prisma, service } = setup();
+    await expect(service.create({ ...input, kind: 'OUTBOX' })).rejects.toMatchObject({
+      response: { code: 'TEMPLATE_REQUIRED' },
+    });
+    prisma.mailTemplate.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      service.create({ ...input, kind: 'OUTBOX', templateId: 't-missing' }),
+    ).rejects.toMatchObject({ response: { code: 'TEMPLATE_NOT_FOUND' } });
+    await expect(service.create({ ...input, smtpConfigId: 's-missing' })).rejects.toMatchObject({
+      response: { code: 'SMTP_NOT_FOUND' },
     });
     expect(prisma.erpSyncConfig.create).not.toHaveBeenCalled();
   });

@@ -110,10 +110,16 @@ model ErpSyncConfig {
   /// Counts of the last run: { fetched, created, updated, skipped, errors, durationMs, messages[] }.
   lastResult      Json?     @map("last_result")
   lastError       String?   @map("last_error")
+  /// OUTBOX only: template used for every row (a `template_code` column overrides it per row).
+  templateId      String?   @map("template_id") @db.Uuid
+  /// OUTBOX only: null = default SMTP config at send time.
+  smtpConfigId    String?   @map("smtp_config_id") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   connection ErpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  template   MailTemplate? @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  smtpConfig SmtpConfig?   @relation(fields: [smtpConfigId], references: [id], onDelete: Restrict)
 
   @@index([connectionId, kind])
   @@map("erp_sync_configs")
@@ -156,7 +162,8 @@ model SmtpConfig {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  mailQueue MailQueue[]
+  mailQueue   MailQueue[]
+  syncConfigs ErpSyncConfig[]
 
   @@map("smtp_configs")
 }
@@ -174,8 +181,9 @@ model MailTemplate {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  mailQueue MailQueue[]
-  versions  MailTemplateVersion[]
+  mailQueue   MailQueue[]
+  versions    MailTemplateVersion[]
+  syncConfigs ErpSyncConfig[]
 
   @@map("mail_templates")
 }

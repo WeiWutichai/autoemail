@@ -20,6 +20,8 @@ const config: SyncConfigWithConnection = {
   lastCursor: null,
   lastResult: null,
   lastError: null,
+  templateId: null,
+  smtpConfigId: null,
   createdAt: now,
   updatedAt: now,
   connection,

@@ -20,7 +20,7 @@ describe('sync config schemas', () => {
   });
 
   it('bounds the poll interval and validates column names', () => {
-    const base = { connectionId: id, name: 'x', kind: 'OUTBOX', querySql: 'SELECT 1' };
+    const base = { connectionId: id, name: 'x', kind: 'CONTACTS', querySql: 'SELECT 1' };
     expect(createSyncConfigSchema.safeParse({ ...base, pollIntervalSec: 10 }).success).toBe(false);
     expect(
       createSyncConfigSchema.safeParse({ ...base, columnMapping: { email: 'bad col' } }).success,
@@ -28,6 +28,14 @@ describe('sync config schemas', () => {
     expect(
       createSyncConfigSchema.safeParse({ ...base, columnMapping: { email: 'Z_Email' } }).success,
     ).toBe(true);
+  });
+
+  it('requires a template for outbox configs', () => {
+    const base = { connectionId: id, name: 'PR/PO', kind: 'OUTBOX', querySql: 'SELECT 1' };
+    const missing = createSyncConfigSchema.safeParse(base);
+    expect(missing.success).toBe(false);
+    expect(missing.error?.issues[0].path).toEqual(['templateId']);
+    expect(createSyncConfigSchema.parse({ ...base, templateId: id }).smtpConfigId).toBeNull();
   });
 
   it('requires at least one field on update', () => {

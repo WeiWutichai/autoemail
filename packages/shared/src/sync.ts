@@ -60,6 +60,10 @@ export const syncConfigSchema = z.object({
   lastSyncedAt: z.string().nullable(),
   lastResult: syncRunResultSchema.nullable(),
   lastError: z.string().nullable(),
+  templateId: z.string().uuid().nullable(),
+  templateCode: z.string().nullable(),
+  smtpConfigId: z.string().uuid().nullable(),
+  smtpConfigName: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -69,15 +73,24 @@ const nameField = z.string().trim().min(1).max(100);
 const queryField = z.string().trim().min(1).max(MAX_QUERY_LENGTH);
 const pollField = z.number().int().min(MIN_POLL_INTERVAL_SEC).max(MAX_POLL_INTERVAL_SEC);
 
-export const createSyncConfigSchema = z.object({
-  connectionId: z.string().uuid(),
-  name: nameField,
-  kind: syncKindSchema,
-  querySql: queryField,
-  columnMapping: columnMappingSchema.nullable().default(null),
-  pollIntervalSec: pollField.default(300),
-  isActive: z.boolean().default(true),
-});
+export const createSyncConfigSchema = z
+  .object({
+    connectionId: z.string().uuid(),
+    name: nameField,
+    kind: syncKindSchema,
+    querySql: queryField,
+    columnMapping: columnMappingSchema.nullable().default(null),
+    pollIntervalSec: pollField.default(300),
+    isActive: z.boolean().default(true),
+    /** OUTBOX: required. */
+    templateId: z.string().uuid().nullable().default(null),
+    /** OUTBOX: null = default SMTP config. */
+    smtpConfigId: z.string().uuid().nullable().default(null),
+  })
+  .refine((v) => v.kind !== 'OUTBOX' || v.templateId !== null, {
+    message: 'Outbox sync requires a template',
+    path: ['templateId'],
+  });
 export type CreateSyncConfigInput = z.infer<typeof createSyncConfigSchema>;
 
 /** `connectionId` and `kind` are fixed after creation. */
@@ -88,6 +101,8 @@ export const updateSyncConfigSchema = z
     columnMapping: columnMappingSchema.nullable(),
     pollIntervalSec: pollField,
     isActive: z.boolean(),
+    templateId: z.string().uuid().nullable(),
+    smtpConfigId: z.string().uuid().nullable(),
   })
   .partial()
   .refine((v) => Object.values(v).some((field) => field !== undefined), {

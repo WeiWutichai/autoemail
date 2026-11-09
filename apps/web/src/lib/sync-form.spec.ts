@@ -21,6 +21,10 @@ const config: SyncConfigDto = {
   lastSyncedAt: null,
   lastResult: null,
   lastError: null,
+  templateId: null,
+  templateCode: null,
+  smtpConfigId: null,
+  smtpConfigName: null,
   createdAt: '',
   updatedAt: '',
 };

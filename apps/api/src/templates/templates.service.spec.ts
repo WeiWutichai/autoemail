@@ -36,6 +36,7 @@ function setup() {
       create: vi.fn().mockResolvedValue({ id: 'q1' }),
       update: vi.fn(),
     },
+    erpSyncConfig: { count: vi.fn().mockResolvedValue(0) },
     smtpConfig: {
       findUnique: vi.fn().mockResolvedValue(smtp),
       findFirst: vi.fn().mockResolvedValue(smtp),

@@ -106,12 +106,15 @@ export class SmtpConfigsService {
 
   async remove(id: string): Promise<void> {
     const smtp = await this.findOrThrow(id);
-    const mails = await this.prisma.mailQueue.count({ where: { smtpConfigId: id } });
-    if (mails > 0) {
+    const [mails, syncConfigs] = await Promise.all([
+      this.prisma.mailQueue.count({ where: { smtpConfigId: id } }),
+      this.prisma.erpSyncConfig.count({ where: { smtpConfigId: id } }),
+    ]);
+    if (mails + syncConfigs > 0) {
       throw new ConflictException({
         code: 'SMTP_IN_USE',
-        message: 'SMTP config is referenced by mails',
-        details: { mails },
+        message: 'SMTP config is referenced by mails or sync configs',
+        details: { mails, syncConfigs },
       });
     }
     if (smtp.isDefault && (await this.prisma.smtpConfig.count()) > 1) {
