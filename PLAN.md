@@ -72,7 +72,7 @@
 - ~~ERP ใช้ DB อะไร~~ → **SQL Server** (ผู้ใช้ตอบ 2026-11-03)
 - ~~จังหวะที่แจ้ง~~ → **ตอนเอกสารรออนุมัติ**; ระบบต้องตั้ง schedule กวาด (poll) จาก ERP เอง (ผู้ใช้ตอบ 2026-11-03)
 - ~~ERP ส่งรายชื่อตาราง/field~~ → ได้ query แล้ว (2026-11-09) ปรับเป็น SELECT เดียวไว้ที่ `docs/erp-queries/pr-po-pending-approval.sql`
-  - กรองรายการตาม script ต้นฉบับ (ผู้ใช้ยืนยัน 2026-11-09): ทุกเอกสารที่ `IsApproved = 0 AND IsComplete <> 1`, `DeptCode` ไม่ว่าง
+  - กรองรายการตาม script ต้นฉบับ (ผู้ใช้ยืนยัน 2026-11-09): ทุกเอกสารที่ `IsApproved = 0 AND IsComplete <> 1 AND IsClosed <> 1`, `DeptCode` ไม่ว่าง
   - ผู้รับ = ทุกแถวใน `Z_MaIL` ของแผนก (`DeptCode`); ข้ามแถวที่ไม่มีอีเมล
   - `erp_ref_id` = `PR|PO:<เลขเอกสาร>:<email>` → 1 ผู้รับได้ 1 ฉบับต่อเอกสาร
 - ข้อมูลเชื่อมต่อ ERP: ผู้ใช้กรอกใน `erp-connection.local.env` (gitignore, template คือ `erp-connection.env.example`) → M2 ทำคำสั่ง import เข้า DB แบบเข้ารหัส
