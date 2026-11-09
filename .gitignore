@@ -11,3 +11,4 @@ coverage
 storage/
 .DS_Store
 *.log
+*.local.env
