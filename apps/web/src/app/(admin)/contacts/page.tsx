@@ -1,13 +1,22 @@
 'use client';
 
-import type { SyncConfigDto } from '@erp-mail/shared';
+import type { ContactDto, SyncConfigDto } from '@erp-mail/shared';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { SyncStatus, toastSyncResult } from '@/components/sync-result';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/native-select';
 import {
   Table,
@@ -22,6 +31,83 @@ import { useContacts, type ContactFilters } from '@/lib/contacts';
 import { errorMessage } from '@/lib/error-messages';
 import { formatDateTime } from '@/lib/format';
 import { useRunSync, useSyncConfigs } from '@/lib/sync';
+import { useTemplates, useTestSend } from '@/lib/templates';
+
+/** Template variables for a contact: its ERP columns plus the mapped fields. */
+function contactVariables(c: ContactDto): Record<string, unknown> {
+  return {
+    ...(c.raw ?? {}),
+    erp_ref_id: c.erpRefId,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    company: c.company,
+  };
+}
+
+function TestSendDialog({ contact, onClose }: { contact: ContactDto; onClose: () => void }) {
+  const { data: templates } = useTemplates();
+  const testSend = useTestSend();
+  const [templateId, setTemplateId] = useState('');
+  const [to, setTo] = useState(contact.email ?? '');
+
+  const send = async () => {
+    try {
+      const res = await testSend.mutateAsync({
+        id: templateId,
+        input: { to: to.trim(), variables: contactVariables(contact) },
+      });
+      if (res.ok) {
+        toast.success(`ส่งเมลทดสอบถึง ${to.trim()} แล้ว`);
+        onClose();
+      } else {
+        toast.error('ส่งไม่สำเร็จ', { description: res.error, duration: 15000 });
+      }
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>ส่งทดสอบถึง {contact.name ?? contact.email}</DialogTitle>
+          <DialogDescription>
+            ใช้ข้อมูลของรายชื่อนี้เป็นตัวแปรใน template ส่งทันทีผ่าน SMTP ค่าเริ่มต้น
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="ts-template">Template</Label>
+          <NativeSelect
+            id="ts-template"
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+          >
+            <option value="">— เลือก —</option>
+            {templates?.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.code} — {t.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="ts-to">ส่งถึง</Label>
+          <Input id="ts-to" type="email" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            ยกเลิก
+          </Button>
+          <Button disabled={!templateId || !to.trim() || testSend.isPending} onClick={send}>
+            {testSend.isPending ? 'กำลังส่ง…' : 'ส่ง'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function ContactSyncCard() {
   const { data: configs } = useSyncConfigs();
@@ -85,6 +171,7 @@ export default function ContactsPage() {
   const { data: connections } = useConnections();
   const [filters, setFilters] = useState<ContactFilters>({ connectionId: '', q: '', page: 1 });
   const [search, setSearch] = useState('');
+  const [testTarget, setTestTarget] = useState<ContactDto | null>(null);
   const { data, isLoading, isFetching, error } = useContacts(filters);
   const pages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
@@ -146,19 +233,20 @@ export default function ContactsPage() {
             <TableHead>รหัส ERP</TableHead>
             <TableHead>Connection</TableHead>
             <TableHead>ดึงล่าสุด</TableHead>
+            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 กำลังโหลด…
               </TableCell>
             </TableRow>
           )}
           {data?.items.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 ไม่พบรายชื่อ
               </TableCell>
             </TableRow>
@@ -173,6 +261,11 @@ export default function ContactsPage() {
               <TableCell>{c.connectionName}</TableCell>
               <TableCell className="text-xs text-muted-foreground">
                 {formatDateTime(c.syncedAt)}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => setTestTarget(c)}>
+                  ส่งทดสอบ
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -200,6 +293,13 @@ export default function ContactsPage() {
           ถัดไป
         </Button>
       </div>
+      {testTarget && (
+        <TestSendDialog
+          key={testTarget.id}
+          contact={testTarget}
+          onClose={() => setTestTarget(null)}
+        />
+      )}
     </div>
   );
 }

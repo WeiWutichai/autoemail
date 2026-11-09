@@ -4,6 +4,7 @@ import {
   Database,
   FileText,
   LogOut,
+  Mail,
   RefreshCw,
   ScrollText,
   ShieldCheck,
@@ -20,6 +21,7 @@ const NAV = [
   { href: '/sync', label: 'Sync', icon: RefreshCw },
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/templates', label: 'Templates', icon: FileText },
+  { href: '/smtp', label: 'SMTP', icon: Mail },
   { href: '/logs', label: 'Logs', icon: ScrollText },
   { href: '/admin-users', label: 'Admin users', icon: ShieldCheck },
 ] as const;
