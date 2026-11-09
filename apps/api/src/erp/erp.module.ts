@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CryptoService } from '../common/crypto/crypto.service';
-import type { Env } from '../config/env';
+import type { BaseEnv } from '../config/env';
 import { ErpDataSourceFactory } from './erp-datasource.factory';
 
 @Module({
@@ -9,7 +9,7 @@ import { ErpDataSourceFactory } from './erp-datasource.factory';
     {
       provide: ErpDataSourceFactory,
       inject: [ConfigService, CryptoService],
-      useFactory: (config: ConfigService<Env, true>, crypto: CryptoService) =>
+      useFactory: (config: ConfigService<BaseEnv, true>, crypto: CryptoService) =>
         new ErpDataSourceFactory(config, crypto),
     },
   ],

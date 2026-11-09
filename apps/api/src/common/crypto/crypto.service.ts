@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
-import type { Env } from '../../config/env';
+import type { BaseEnv } from '../../config/env';
 
 const ALGORITHM = 'aes-256-gcm';
 const VERSION = 'v1';
@@ -14,7 +14,7 @@ const TAG_BYTES = 16;
 export class CryptoService {
   private readonly key: Buffer;
 
-  constructor(config: ConfigService<Env, true>) {
+  constructor(config: ConfigService<BaseEnv, true>) {
     this.key = CryptoService.parseKey(config.get('MASTER_KEY', { infer: true }));
   }
 

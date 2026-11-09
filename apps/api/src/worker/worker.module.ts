@@ -1,15 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { validateEnv } from './config/env';
+import { CryptoModule } from '../common/crypto/crypto.module';
+import { validateWorkerEnv } from '../config/env';
+import { ErpModule } from '../erp/erp.module';
+import { PrismaModule } from '../prisma/prisma.module';
 
-/** Root module for the background worker (fetch + send jobs are added in M3/M5). */
+/** Root module of the worker process (no HTTP server). */
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
-      validate: validateEnv,
+      validate: validateWorkerEnv,
     }),
     LoggerModule.forRoot({
       pinoHttp: {
@@ -17,6 +20,9 @@ import { validateEnv } from './config/env';
         transport: process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined,
       },
     }),
+    PrismaModule,
+    CryptoModule,
+    ErpModule,
   ],
 })
 export class WorkerModule {}

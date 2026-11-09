@@ -3,7 +3,7 @@ import type { ConfigService } from '@nestjs/config';
 import type { ErpConnection } from '@prisma/client';
 import type { Knex } from 'knex';
 import type { CryptoService } from '../common/crypto/crypto.service';
-import type { Env } from '../config/env';
+import type { BaseEnv } from '../config/env';
 import { ErpDataSourceFactory, sanitizeError } from './erp-datasource.factory';
 
 const conn: ErpConnection = {
@@ -35,9 +35,9 @@ function fakeKnex(rawResult: Promise<unknown> = Promise.resolve([])) {
 
 function setup(rawResult?: Promise<unknown>) {
   const config = {
-    get: (key: keyof Env) =>
+    get: (key: keyof BaseEnv) =>
       ({ ERP_QUERY_TIMEOUT_MS: 5000, ERP_MAX_CONNECTIONS: 2 })[key as string],
-  } as unknown as ConfigService<Env, true>;
+  } as unknown as ConfigService<BaseEnv, true>;
   const crypto = { decrypt: vi.fn((v: string) => v.replace('enc:', '')) };
   const instances: ReturnType<typeof fakeKnex>[] = [];
   const createKnex = vi.fn((_cfg: Knex.Config) => {

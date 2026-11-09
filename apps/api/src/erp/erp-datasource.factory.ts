@@ -4,7 +4,7 @@ import type { ErpConnection } from '@prisma/client';
 import knex, { type Knex } from 'knex';
 import { performance } from 'node:perf_hooks';
 import { CryptoService } from '../common/crypto/crypto.service';
-import type { Env } from '../config/env';
+import type { BaseEnv } from '../config/env';
 import { buildKnexConfig, pingSql, type ErpPoolOptions } from './knex-config';
 
 export type KnexFactory = (config: Knex.Config) => Knex;
@@ -29,7 +29,7 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
   private readonly createKnex: KnexFactory;
 
   constructor(
-    config: ConfigService<Env, true>,
+    config: ConfigService<BaseEnv, true>,
     private readonly crypto: CryptoService,
     createKnex?: KnexFactory,
   ) {

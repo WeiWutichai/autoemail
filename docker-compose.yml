@@ -56,12 +56,14 @@ services:
       redis:
         condition: service_healthy
 
+  # Same image as api, different entrypoint (no HTTP server, no migrations).
   worker:
     build:
       context: .
-      dockerfile: apps/worker/Dockerfile
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     <<: *app-env
+    command: ['node', 'dist/worker.main.js']
     volumes:
       - attachments:/app/storage/attachments
     depends_on:
@@ -69,6 +71,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      api:
+        condition: service_started
 
   web:
     build:

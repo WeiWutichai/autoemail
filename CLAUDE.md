@@ -7,7 +7,7 @@ Design doc ฉบับเต็ม: `docs/DESIGN.md` — อ่านก่อ�
 
 - Monorepo: pnpm workspaces + Turborepo
 - `apps/api` — NestJS 10, TypeScript strict, Prisma 5, PostgreSQL 16
-- `apps/worker` — NestJS standalone app, BullMQ 5 + Redis 7 (fetch job, send job)
+- worker — entrypoint ที่สองใน `apps/api` (`src/worker.main.ts`), NestJS standalone, BullMQ 5 + Redis 7 (fetch job, send job)
 - `apps/web` — Next.js 14 App Router, Tailwind, shadcn/ui, TanStack Query
 - `packages/shared` — DTO, zod schema, enum ที่ api/web/worker ใช้ร่วมกัน
 - ERP drivers: `mssql`, `oracledb`, `mysql2`, `pg` (โหลดผ่าน Knex dynamic DataSource)

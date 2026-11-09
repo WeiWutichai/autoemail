@@ -1,4 +1,4 @@
-import { parseDurationSec, validateEnv } from './env';
+import { parseDurationSec, validateEnv, validateWorkerEnv } from './env';
 
 const base = {
   DATABASE_URL: 'postgresql://x',
@@ -37,5 +37,19 @@ describe('parseDurationSec', () => {
     ['7d', 604800],
   ])('parses %s', (input, expected) => {
     expect(parseDurationSec(input)).toBe(expected);
+  });
+});
+
+describe('validateWorkerEnv', () => {
+  it('does not require JWT secrets and defaults Redis / tick', () => {
+    const env = validateWorkerEnv({ DATABASE_URL: 'postgresql://x', MASTER_KEY: 'k' });
+    expect(env.REDIS_URL).toBe('redis://localhost:6379');
+    expect(env.SYNC_TICK_SEC).toBe(30);
+    expect(env.ERP_MAX_CONNECTIONS).toBe(2);
+  });
+
+  it('requires DATABASE_URL and MASTER_KEY', () => {
+    expect(() => validateWorkerEnv({ MASTER_KEY: 'k' })).toThrow();
+    expect(() => validateWorkerEnv({ DATABASE_URL: 'postgresql://x' })).toThrow();
   });
 });

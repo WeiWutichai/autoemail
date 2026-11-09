@@ -20,7 +20,6 @@ pnpm dev                    # api :3001, web :3000, worker
 
 | path              | หน้าที่                            |
 | ----------------- | ---------------------------------- |
-| `apps/api`        | NestJS REST API + Prisma           |
-| `apps/worker`     | NestJS standalone (BullMQ jobs)    |
+| `apps/api`        | NestJS REST API + Prisma + worker entrypoint (`worker.main.ts`, BullMQ jobs) |
 | `apps/web`        | Next.js 14 Admin UI                |
 | `packages/shared` | DTO / zod schema / enum ที่ใช้ร่วมกัน |
