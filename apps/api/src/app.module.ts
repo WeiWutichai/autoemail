@@ -8,6 +8,7 @@ import { ConnectionsModule } from './connections/connections.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
+import { MailsModule } from './mails/mails.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SmtpModule } from './smtp/smtp.module';
 import { SyncConfigsModule } from './sync/sync-configs.module';
@@ -37,6 +38,7 @@ import { TemplatesModule } from './templates/templates.module';
     ContactsModule,
     SmtpModule,
     TemplatesModule,
+    MailsModule,
   ],
 })
 export class AppModule {}
