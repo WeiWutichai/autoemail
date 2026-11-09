@@ -11,3 +11,6 @@ coverage
 storage/
 .DS_Store
 *.log
+
+# Local deploy credentials (SSH key, VPS host) - never commit
+deploy/private/
