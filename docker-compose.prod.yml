@@ -1,0 +1,52 @@
+# Production overlay: HTTPS via nginx + Let's Encrypt; only nginx is published.
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# See README "Deploy" for issuing the first certificate.
+services:
+  postgres:
+    ports: !reset []
+
+  redis:
+    ports: !reset []
+
+  api:
+    ports: !reset []
+    environment:
+      NODE_ENV: production
+
+  worker:
+    environment:
+      NODE_ENV: production
+
+  web:
+    ports: !reset []
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+      - ./deploy/nginx/start.sh:/start.sh:ro
+    entrypoint: ['/bin/sh', '/start.sh']
+    depends_on:
+      - web
+
+  # Renews certificates twice a day (webroot challenge served by nginx; nginx reloads every 6h).
+  certbot:
+    image: certbot/certbot:v2.11.0
+    restart: unless-stopped
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+      - ./deploy/certbot/renew-loop.sh:/renew-loop.sh:ro
+    entrypoint: ['/bin/sh', '/renew-loop.sh']
+
+volumes:
+  letsencrypt:
+  certbot-www:

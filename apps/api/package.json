@@ -12,11 +12,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:load": "vitest run --config vitest.load.config.ts",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "db:generate": "prisma generate",
     "db:validate": "dotenv -e ../../.env -- prisma validate",
     "postinstall": "prisma generate",
-    "db:seed": "nest build && dotenv -e ../../.env -- node dist/cli/seed-admin.js"
+    "db:seed": "nest build && dotenv -e ../../.env -- node dist/cli/seed-admin.js",
+    "rotate-key": "nest build && dotenv -e ../../.env -- node dist/cli/rotate-key.js"
   },
   "dependencies": {
     "@erp-mail/shared": "workspace:*",
