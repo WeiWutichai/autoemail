@@ -20,15 +20,15 @@
 ## Tasks (ทำตามลำดับ)
 
 ### T1 — Shared schemas
-- [ ] `packages/shared/src/connections.ts`: `dbTypeSchema`, `DEFAULT_PORTS`, `erpConnectionSchema` (DTO มี `hasPassword`, ไม่มี password), `createErpConnectionSchema`, `updateErpConnectionSchema` (password ว่าง/ไม่ส่ง = คงเดิม), `testConnectionResultSchema`
-- [ ] unit test schema
+- [x] `packages/shared/src/connections.ts`: `dbTypeSchema`, `DEFAULT_PORTS`, `erpConnectionSchema` (DTO มี `hasPassword`, ไม่มี password), `createErpConnectionSchema`, `updateErpConnectionSchema` (password ว่าง/ไม่ส่ง = คงเดิม), `testConnectionResultSchema`
+- [x] unit test schema
 
 ### T2 — Prisma: `trustServerCert`
-- [ ] เพิ่ม field `trustServerCert Boolean @default(false) @map("trust_server_cert")` + migration `erp_connection_trust_server_cert`
+- [x] เพิ่ม field `trustServerCert Boolean @default(false) @map("trust_server_cert")` + migration `erp_connection_trust_server_cert`
 
 ### T3 — SqlValidator
-- [ ] `apps/api/src/common/sql/sql-validator.ts`: ตัด comment / string literal ก่อนตรวจ; ต้องขึ้นต้นด้วย `SELECT` หรือ `WITH`; ห้าม `;`, `INTO`, `EXEC`/`EXECUTE`, `xp_`/`sp_`, DML/DDL (`INSERT UPDATE DELETE MERGE DROP ALTER CREATE TRUNCATE GRANT REVOKE DENY`), `OPENROWSET OPENQUERY OPENDATASOURCE BULK WAITFOR DBCC BACKUP RESTORE SHUTDOWN DECLARE`
-- [ ] unit test: query PR/PO จริงผ่าน, ทุก keyword ต้องห้ามถูกปฏิเสธ, keyword ใน string/comment ไม่ทำให้ผิด
+- [x] `apps/api/src/common/sql/sql-validator.ts`: ตัด comment / string literal ก่อนตรวจ; ต้องขึ้นต้นด้วย `SELECT` หรือ `WITH`; ห้าม `;`, `INTO`, `EXEC`/`EXECUTE`, `xp_`, DML/DDL (`INSERT UPDATE DELETE MERGE DROP ALTER CREATE TRUNCATE GRANT REVOKE DENY`), `OPENROWSET OPENQUERY OPENDATASOURCE BULK WAITFOR DBCC BACKUP RESTORE SHUTDOWN DECLARE USE KILL RECONFIGURE`
+- [x] unit test: query PR/PO จริงผ่าน, ทุก keyword ต้องห้ามถูกปฏิเสธ, keyword ใน string/comment ไม่ทำให้ผิด
 
 ### T4 — ERP DataSource factory
 - [ ] ติดตั้ง `knex` + driver `tedious` (SQL Server), `pg`, `mysql2`, `oracledb` (thin mode)
