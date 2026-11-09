@@ -9,6 +9,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SmtpModule } from './smtp/smtp.module';
 import { SyncConfigsModule } from './sync/sync-configs.module';
 
 @Module({
@@ -33,6 +34,7 @@ import { SyncConfigsModule } from './sync/sync-configs.module';
     ConnectionsModule,
     SyncConfigsModule,
     ContactsModule,
+    SmtpModule,
   ],
 })
 export class AppModule {}
