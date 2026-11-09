@@ -2,11 +2,13 @@ import type { ConfigService } from '@nestjs/config';
 import type { WorkerEnv } from '../config/env';
 import type { DeadAlertService } from '../delivery/dead-alert.service';
 import type { DeliveryService } from '../delivery/delivery.service';
+import type { PrivacyService } from '../privacy/privacy.service';
 import { MaintenanceScheduler } from './maintenance.scheduler';
 import { SendScheduler } from './send.scheduler';
 
 const config = {
-  get: (key: keyof WorkerEnv) => ({ DEAD_ALERT_INTERVAL_MIN: 15 })[key as string],
+  get: (key: keyof WorkerEnv) =>
+    ({ DEAD_ALERT_INTERVAL_MIN: 15, LOG_RETENTION_DAYS: 90 })[key as string],
 } as unknown as ConfigService<WorkerEnv, true>;
 
 describe('SendScheduler', () => {
@@ -34,11 +36,15 @@ describe('MaintenanceScheduler', () => {
   it('recovers stuck mails and alerts on a window ending at the scheduled time', async () => {
     const delivery = { recoverStuck: vi.fn() };
     const alerts = { notify: vi.fn() };
+    const privacy = { purgeOldContent: vi.fn() };
     const scheduler = new MaintenanceScheduler(
       config,
       delivery as unknown as DeliveryService,
       alerts as unknown as DeadAlertService,
+      privacy as unknown as PrivacyService,
     );
+    await scheduler.handle('retention', 0);
+    expect(privacy.purgeOldContent).toHaveBeenCalledWith(90);
     await scheduler.handle('recover-stuck', 0);
     expect(delivery.recoverStuck).toHaveBeenCalled();
 

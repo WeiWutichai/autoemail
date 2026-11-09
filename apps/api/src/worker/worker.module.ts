@@ -6,6 +6,7 @@ import { validateWorkerEnv } from '../config/env';
 import { DeliveryModule } from '../delivery/delivery.module';
 import { ErpModule } from '../erp/erp.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PrivacyService } from '../privacy/privacy.service';
 import { SyncModule } from '../sync/sync.module';
 import { MaintenanceScheduler } from './maintenance.scheduler';
 import { SendScheduler } from './send.scheduler';
@@ -31,6 +32,6 @@ import { SyncScheduler } from './sync.scheduler';
     SyncModule,
     DeliveryModule,
   ],
-  providers: [SyncScheduler, SendScheduler, MaintenanceScheduler],
+  providers: [SyncScheduler, SendScheduler, MaintenanceScheduler, PrivacyService],
 })
 export class WorkerModule {}

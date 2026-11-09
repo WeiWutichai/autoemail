@@ -9,25 +9,30 @@ import { Queue, Worker, type Job } from 'bullmq';
 import type { WorkerEnv } from '../config/env';
 import { DeadAlertService } from '../delivery/dead-alert.service';
 import { DeliveryService } from '../delivery/delivery.service';
+import { PrivacyService } from '../privacy/privacy.service';
 import { MAINTENANCE_QUEUE } from './queues';
 import { redisConnection } from './redis-connection';
 
 const RECOVER_EVERY_MS = 60_000;
+const RETENTION_EVERY_MS = 24 * 3600_000;
 
-/** Housekeeping jobs: recover stuck SENDING mails, alert admins about dead mails. */
+/** Housekeeping jobs: recover stuck SENDING mails, alert admins about dead mails, retention. */
 @Injectable()
 export class MaintenanceScheduler implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(MaintenanceScheduler.name);
   private queue?: Queue;
   private worker?: Worker;
   private readonly alertEveryMs: number;
+  private readonly retentionDays: number;
 
   constructor(
     private readonly config: ConfigService<WorkerEnv, true>,
     private readonly delivery: DeliveryService,
     private readonly alerts: DeadAlertService,
+    private readonly privacy: PrivacyService,
   ) {
     this.alertEveryMs = config.get('DEAD_ALERT_INTERVAL_MIN', { infer: true }) * 60_000;
+    this.retentionDays = config.get('LOG_RETENTION_DAYS', { infer: true });
   }
 
   async onApplicationBootstrap(): Promise<void> {
@@ -40,6 +45,11 @@ export class MaintenanceScheduler implements OnApplicationBootstrap, OnApplicati
       'recover-stuck',
       { every: RECOVER_EVERY_MS },
       { name: 'recover-stuck' },
+    );
+    await this.queue.upsertJobScheduler(
+      'retention',
+      { every: RETENTION_EVERY_MS },
+      { name: 'retention' },
     );
     if (this.alertEveryMs > 0) {
       await this.queue.upsertJobScheduler(
@@ -73,6 +83,8 @@ export class MaintenanceScheduler implements OnApplicationBootstrap, OnApplicati
   async handle(name: string, scheduledAt: number): Promise<void> {
     if (name === 'recover-stuck') {
       await this.delivery.recoverStuck();
+    } else if (name === 'retention') {
+      await this.privacy.purgeOldContent(this.retentionDays);
     } else if (name === 'dead-alert' && this.alertEveryMs > 0) {
       await this.alerts.notify(new Date(scheduledAt - this.alertEveryMs), new Date(scheduledAt));
     }

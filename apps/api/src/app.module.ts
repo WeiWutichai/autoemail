@@ -10,6 +10,7 @@ import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { MailsModule } from './mails/mails.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { SmtpModule } from './smtp/smtp.module';
 import { SyncConfigsModule } from './sync/sync-configs.module';
 import { TemplatesModule } from './templates/templates.module';
@@ -39,6 +40,7 @@ import { TemplatesModule } from './templates/templates.module';
     SmtpModule,
     TemplatesModule,
     MailsModule,
+    PrivacyModule,
   ],
 })
 export class AppModule {}

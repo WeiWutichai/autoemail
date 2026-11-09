@@ -69,6 +69,8 @@ export const workerEnvSchema = baseEnvSchema.extend({
   STUCK_SENDING_MIN: z.coerce.number().int().min(1).max(1440).default(10),
   /** Interval of the "mails are dead" summary to admins (0 = off). */
   DEAD_ALERT_INTERVAL_MIN: z.coerce.number().int().min(0).max(1440).default(15),
+  /** Rendered mail content older than this is removed (PDPA). */
+  LOG_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
 });
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;

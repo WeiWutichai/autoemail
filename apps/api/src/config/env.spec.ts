@@ -52,6 +52,7 @@ describe('validateWorkerEnv', () => {
       SEND_MAX_ATTEMPTS: 5,
       STUCK_SENDING_MIN: 10,
       DEAD_ALERT_INTERVAL_MIN: 15,
+      LOG_RETENTION_DAYS: 90,
       MAIL_TIMEZONE: 'Asia/Bangkok',
     });
     expect(env.ERP_MAX_CONNECTIONS).toBe(2);
