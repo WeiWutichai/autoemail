@@ -6,3 +6,5 @@ export * from './sync';
 export * from './contacts';
 export * from './smtp';
 export * from './templates';
+export * from './mails';
+export * from './audit';
