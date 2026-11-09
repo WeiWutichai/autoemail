@@ -4,3 +4,5 @@ export * from './connections';
 export * from './pagination';
 export * from './sync';
 export * from './contacts';
+export * from './smtp';
+export * from './templates';
