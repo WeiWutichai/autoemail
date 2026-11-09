@@ -18,7 +18,7 @@ export async function createTestApp(
 
 export async function resetDb(prisma: PrismaService): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE admin_audit_logs, admin_sessions, admin_users, erp_connections, erp_sync_configs, contacts RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE admin_audit_logs, admin_sessions, admin_users, erp_connections, erp_sync_configs, contacts, mail_logs, mail_queue, mail_template_versions, mail_templates, smtp_configs RESTART IDENTITY CASCADE',
   );
 }
 

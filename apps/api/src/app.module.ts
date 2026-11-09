@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SmtpModule } from './smtp/smtp.module';
 import { SyncConfigsModule } from './sync/sync-configs.module';
+import { TemplatesModule } from './templates/templates.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SyncConfigsModule } from './sync/sync-configs.module';
     SyncConfigsModule,
     ContactsModule,
     SmtpModule,
+    TemplatesModule,
   ],
 })
 export class AppModule {}
