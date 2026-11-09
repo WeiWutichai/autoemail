@@ -4,7 +4,8 @@ import { HttpException } from '@nestjs/common';
 import { ErpQueryError } from '../erp/erp-datasource.factory';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContactSyncService } from './contact-sync.service';
-import type { SyncConfigWithConnection } from './sync-config.mapper';
+import { OutboxSyncService } from './outbox-sync.service';
+import { SYNC_CONFIG_INCLUDE, type SyncConfigWithConnection } from './sync-config.mapper';
 
 type SyncHandler = (config: SyncConfigWithConnection) => Promise<SyncRunResult>;
 
@@ -22,8 +23,12 @@ export class SyncRunnerService {
   constructor(
     private readonly prisma: PrismaService,
     contacts: ContactSyncService,
+    outbox: OutboxSyncService,
   ) {
-    this.handlers = { CONTACTS: (config) => contacts.sync(config) };
+    this.handlers = {
+      CONTACTS: (config) => contacts.sync(config),
+      OUTBOX: (config) => outbox.sync(config),
+    };
   }
 
   isRunning(configId: string): boolean {
@@ -36,7 +41,7 @@ export class SyncRunnerService {
     }
     const config = await this.prisma.erpSyncConfig.findUnique({
       where: { id: configId },
-      include: { connection: true },
+      include: SYNC_CONFIG_INCLUDE,
     });
     if (!config) {
       throw new NotFoundException({

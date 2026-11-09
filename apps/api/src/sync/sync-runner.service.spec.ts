@@ -3,6 +3,7 @@ import type { ErpConnection } from '@prisma/client';
 import { ErpQueryError } from '../erp/erp-datasource.factory';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { ContactSyncService } from './contact-sync.service';
+import type { OutboxSyncService } from './outbox-sync.service';
 import { SyncRunnerService } from './sync-runner.service';
 
 const now = new Date('2026-11-09T00:00:00Z');
@@ -37,11 +38,13 @@ function setup() {
     },
   };
   const contacts = { sync: vi.fn().mockResolvedValue(result) };
+  const outbox = { sync: vi.fn().mockResolvedValue(result) };
   const runner = new SyncRunnerService(
     prisma as unknown as PrismaService,
     contacts as unknown as ContactSyncService,
+    outbox as unknown as OutboxSyncService,
   );
-  return { prisma, contacts, runner };
+  return { prisma, contacts, outbox, runner };
 }
 
 describe('SyncRunnerService', () => {
@@ -81,6 +84,13 @@ describe('SyncRunnerService', () => {
     expect(res.error).toBe('Unexpected error during sync');
   });
 
+  it('dispatches outbox configs to the outbox handler', async () => {
+    const { prisma, outbox, runner } = setup();
+    prisma.erpSyncConfig.findUnique.mockResolvedValue({ ...config, kind: 'OUTBOX' });
+    await runner.run('s1');
+    expect(outbox.sync).toHaveBeenCalled();
+  });
+
   it('rejects unknown configs, inactive connections and overlapping runs', async () => {
     const { prisma, contacts, runner } = setup();
     prisma.erpSyncConfig.findUnique.mockResolvedValueOnce(null);
@@ -103,7 +113,7 @@ describe('SyncRunnerService', () => {
     await first;
   });
 
-  it('finds configs whose interval elapsed and skips unsupported kinds', async () => {
+  it('finds configs whose interval elapsed', async () => {
     const { prisma, runner } = setup();
     prisma.erpSyncConfig.findMany.mockResolvedValue([
       { id: 'never', kind: 'CONTACTS', lastSyncedAt: null, pollIntervalSec: 300 },
@@ -121,6 +131,6 @@ describe('SyncRunnerService', () => {
       },
       { id: 'outbox', kind: 'OUTBOX', lastSyncedAt: null, pollIntervalSec: 300 },
     ]);
-    await expect(runner.findDue(now)).resolves.toEqual(['never', 'due']);
+    await expect(runner.findDue(now)).resolves.toEqual(['never', 'due', 'outbox']);
   });
 });
