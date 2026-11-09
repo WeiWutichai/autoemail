@@ -3,9 +3,12 @@ import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { CryptoModule } from '../common/crypto/crypto.module';
 import { validateWorkerEnv } from '../config/env';
+import { DeliveryModule } from '../delivery/delivery.module';
 import { ErpModule } from '../erp/erp.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SyncModule } from '../sync/sync.module';
+import { MaintenanceScheduler } from './maintenance.scheduler';
+import { SendScheduler } from './send.scheduler';
 import { SyncScheduler } from './sync.scheduler';
 
 /** Root module of the worker process (no HTTP server). */
@@ -26,7 +29,8 @@ import { SyncScheduler } from './sync.scheduler';
     CryptoModule,
     ErpModule,
     SyncModule,
+    DeliveryModule,
   ],
-  providers: [SyncScheduler],
+  providers: [SyncScheduler, SendScheduler, MaintenanceScheduler],
 })
 export class WorkerModule {}
