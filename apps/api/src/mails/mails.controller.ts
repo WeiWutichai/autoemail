@@ -16,6 +16,7 @@ import {
   type MailSummaryDto,
   type Paginated,
 } from '@erp-mail/shared';
+import { Audit } from '../audit/audit.decorator';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
@@ -44,6 +45,7 @@ export class MailsController {
 
   @Post(':id/retry')
   @HttpCode(HttpStatus.OK)
+  @Audit('mail.retry')
   retry(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,
@@ -53,6 +55,7 @@ export class MailsController {
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
+  @Audit('mail.cancel')
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthUser,

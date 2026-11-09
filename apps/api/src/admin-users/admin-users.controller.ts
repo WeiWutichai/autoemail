@@ -20,6 +20,7 @@ import {
 } from '@erp-mail/shared';
 import type { AuthUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { Audit } from '../audit/audit.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { AdminUsersService } from './admin-users.service';
 
@@ -33,6 +34,7 @@ export class AdminUsersController {
   }
 
   @Post()
+  @Audit('admin_user.create')
   create(
     @Body(new ZodValidationPipe(createAdminUserSchema)) body: CreateAdminUserInput,
   ): Promise<AdminUserDto> {
@@ -40,6 +42,7 @@ export class AdminUsersController {
   }
 
   @Patch(':id')
+  @Audit('admin_user.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateAdminUserSchema)) body: UpdateAdminUserInput,
@@ -49,6 +52,7 @@ export class AdminUsersController {
   }
 
   @Post(':id/reset-password')
+  @Audit('admin_user.reset_password')
   @HttpCode(HttpStatus.NO_CONTENT)
   resetPassword(
     @Param('id', ParseUUIDPipe) id: string,

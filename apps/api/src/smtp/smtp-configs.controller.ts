@@ -20,6 +20,7 @@ import {
   type TestSmtpResult,
   type UpdateSmtpConfigInput,
 } from '@erp-mail/shared';
+import { Audit } from '../audit/audit.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { SmtpConfigsService } from './smtp-configs.service';
 
@@ -38,6 +39,7 @@ export class SmtpConfigsController {
   }
 
   @Post()
+  @Audit('smtp.create')
   create(
     @Body(new ZodValidationPipe(createSmtpConfigSchema)) body: CreateSmtpConfigInput,
   ): Promise<SmtpConfigDto> {
@@ -45,6 +47,7 @@ export class SmtpConfigsController {
   }
 
   @Patch(':id')
+  @Audit('smtp.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateSmtpConfigSchema)) body: UpdateSmtpConfigInput,
@@ -53,6 +56,7 @@ export class SmtpConfigsController {
   }
 
   @Delete(':id')
+  @Audit('smtp.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.smtp.remove(id);

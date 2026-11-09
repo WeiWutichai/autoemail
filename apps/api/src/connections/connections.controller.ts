@@ -18,6 +18,7 @@ import {
   type TestConnectionResult,
   type UpdateErpConnectionInput,
 } from '@erp-mail/shared';
+import { Audit } from '../audit/audit.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { ConnectionsService } from './connections.service';
 
@@ -36,6 +37,7 @@ export class ConnectionsController {
   }
 
   @Post()
+  @Audit('connection.create')
   create(
     @Body(new ZodValidationPipe(createErpConnectionSchema)) body: CreateErpConnectionInput,
   ): Promise<ErpConnectionDto> {
@@ -43,6 +45,7 @@ export class ConnectionsController {
   }
 
   @Patch(':id')
+  @Audit('connection.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateErpConnectionSchema)) body: UpdateErpConnectionInput,
@@ -51,6 +54,7 @@ export class ConnectionsController {
   }
 
   @Delete(':id')
+  @Audit('connection.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.connections.remove(id);

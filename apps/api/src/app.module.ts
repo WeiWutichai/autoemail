@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { AdminUsersModule } from './admin-users/admin-users.module';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CryptoModule } from './common/crypto/crypto.module';
 import { ConnectionsModule } from './connections/connections.module';
@@ -41,6 +42,7 @@ import { TemplatesModule } from './templates/templates.module';
     TemplatesModule,
     MailsModule,
     PrivacyModule,
+    AuditModule,
   ],
 })
 export class AppModule {}

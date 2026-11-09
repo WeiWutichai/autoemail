@@ -21,6 +21,7 @@ import {
   type SyncRunResponse,
   type UpdateSyncConfigInput,
 } from '@erp-mail/shared';
+import { Audit } from '../audit/audit.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { SyncConfigsService } from './sync-configs.service';
 import { SyncRunnerService } from './sync-runner.service';
@@ -43,6 +44,7 @@ export class SyncConfigsController {
   }
 
   @Post()
+  @Audit('sync_config.create')
   create(
     @Body(new ZodValidationPipe(createSyncConfigSchema)) body: CreateSyncConfigInput,
   ): Promise<SyncConfigDto> {
@@ -58,6 +60,7 @@ export class SyncConfigsController {
   }
 
   @Patch(':id')
+  @Audit('sync_config.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateSyncConfigSchema)) body: UpdateSyncConfigInput,
@@ -66,12 +69,14 @@ export class SyncConfigsController {
   }
 
   @Delete(':id')
+  @Audit('sync_config.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.configs.remove(id);
   }
 
   @Post(':id/run')
+  @Audit('sync_config.run')
   @HttpCode(HttpStatus.OK)
   run(@Param('id', ParseUUIDPipe) id: string): Promise<SyncRunResponse> {
     return this.runner.run(id);

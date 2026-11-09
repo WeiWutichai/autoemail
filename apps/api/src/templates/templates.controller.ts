@@ -24,6 +24,7 @@ import {
   type TestSendResult,
   type UpdateMailTemplateInput,
 } from '@erp-mail/shared';
+import { Audit } from '../audit/audit.decorator';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { TemplatesService } from './templates.service';
 
@@ -55,6 +56,7 @@ export class TemplatesController {
   }
 
   @Post()
+  @Audit('template.create')
   create(
     @Body(new ZodValidationPipe(createMailTemplateSchema)) body: CreateMailTemplateInput,
   ): Promise<MailTemplateDto> {
@@ -62,6 +64,7 @@ export class TemplatesController {
   }
 
   @Patch(':id')
+  @Audit('template.update')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body(new ZodValidationPipe(updateMailTemplateSchema)) body: UpdateMailTemplateInput,
@@ -70,12 +73,14 @@ export class TemplatesController {
   }
 
   @Delete(':id')
+  @Audit('template.delete')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.templates.remove(id);
   }
 
   @Post(':id/test-send')
+  @Audit('template.test_send')
   @HttpCode(HttpStatus.OK)
   testSend(
     @Param('id', ParseUUIDPipe) id: string,
