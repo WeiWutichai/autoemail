@@ -68,6 +68,17 @@
 ## Open questions (ตอบก่อนเริ่ม M2 ไม่กระทบ M1)
 
 - ERP ปล่อยเมลแบบไหน: ตาราง outbox / API / SMTP / mailbox
+- ~~ประเภทเอกสารที่ต้องแจ้งเตือน~~ → **PR (Purchase Requisition) และ PO (Purchase Order)** (ผู้ใช้ตอบ 2026-11-03)
+- ~~ERP ใช้ DB อะไร~~ → **SQL Server** (ผู้ใช้ตอบ 2026-11-03)
+- ~~จังหวะที่แจ้ง~~ → **ตอนเอกสารรออนุมัติ**; ระบบต้องตั้ง schedule กวาด (poll) จาก ERP เอง (ผู้ใช้ตอบ 2026-11-03)
+- ~~ERP ส่งรายชื่อตาราง/field~~ → ได้ query แล้ว (2026-11-09) ปรับเป็น SELECT เดียวไว้ที่ `docs/erp-queries/pr-po-pending-approval.sql`
+  - แจ้งเฉพาะสถานะ "รอการอนุมัติ" (IsApproved/IsCheck/IsComplete/IsClosed = 0)
+  - ผู้รับ = `Z_MaIL` ของแผนก (`DeptCode`) ที่ `Approved = 1`
+  - `erp_ref_id` = `PR|PO:<เลขเอกสาร>:<email>` → 1 ผู้อนุมัติได้ 1 ฉบับต่อเอกสาร
+- ข้อมูลเชื่อมต่อ ERP: ผู้ใช้กรอกใน `erp-connection.local.env` (gitignore, template คือ `erp-connection.env.example`) → M2 ทำคำสั่ง import เข้า DB แบบเข้ารหัส
+- ~~รอบการกวาด~~ → **ทุก 5 นาที** (`pollIntervalSec = 300`) (ผู้ใช้ตอบ 2026-11-09)
+- ~~SMTP: App Password หรือ Relay~~ → **App Password** (ผู้ใช้ตอบ 2026-11-09)
+- ~~แนบไฟล์~~ → **ไม่ต้องแนบไฟล์** (ผู้ใช้ตอบ 2026-11-09)
 - ERP ใช้ DB อะไร
 - ปริมาณเมลต่อวัน
 - SMTP: App Password หรือ Relay + IP allowlist
