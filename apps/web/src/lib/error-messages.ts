@@ -25,6 +25,9 @@ const MESSAGES: Record<string, string> = {
   TEMPLATE_CODE_TAKEN: 'รหัส template นี้ถูกใช้แล้ว',
   TEMPLATE_IN_USE: 'template นี้เคยใช้ส่งเมลแล้ว จึงลบไม่ได้ ให้ปิดการใช้งานแทน',
   TEMPLATE_INVALID: 'รูปแบบ template ไม่ถูกต้อง',
+  TEMPLATE_REQUIRED: 'การดึงเมลที่ต้องส่งต้องเลือก template',
+  MAIL_NOT_FOUND: 'ไม่พบเมลนี้',
+  MAIL_STATE_CONFLICT: 'สถานะเมลเปลี่ยนไปแล้ว ทำรายการนี้ไม่ได้ กรุณารีเฟรช',
 };
 
 /** Codes whose API message (already sanitized) helps the admin fix the input. */

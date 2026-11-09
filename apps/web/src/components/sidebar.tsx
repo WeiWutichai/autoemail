@@ -3,6 +3,7 @@
 import {
   Database,
   FileText,
+  History,
   LogOut,
   Mail,
   RefreshCw,
@@ -23,6 +24,7 @@ const NAV = [
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/smtp', label: 'SMTP', icon: Mail },
   { href: '/logs', label: 'Logs', icon: ScrollText },
+  { href: '/audit', label: 'Audit & PDPA', icon: History },
   { href: '/admin-users', label: 'Admin users', icon: ShieldCheck },
 ] as const;
 
