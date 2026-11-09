@@ -24,6 +24,15 @@ const durationSec = (fallback: string) =>
       }
     });
 
+function isTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Settings shared by the api and the worker process. */
 export const baseEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -31,6 +40,11 @@ export const baseEnvSchema = z.object({
   MASTER_KEY: z.string().min(1),
   ERP_QUERY_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
   ERP_MAX_CONNECTIONS: z.coerce.number().int().min(1).max(20).default(2),
+  /** Day boundary for SMTP daily limits and dashboard counts. */
+  MAIL_TIMEZONE: z
+    .string()
+    .default('Asia/Bangkok')
+    .refine(isTimeZone, { message: 'Unknown IANA time zone' }),
 });
 
 export const envSchema = baseEnvSchema.extend({
@@ -46,6 +60,15 @@ export const workerEnvSchema = baseEnvSchema.extend({
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   /** How often the worker looks for sync configs that are due. */
   SYNC_TICK_SEC: z.coerce.number().int().min(1).max(3600).default(30),
+  /** How often the worker looks for mails that are due. */
+  SEND_TICK_SEC: z.coerce.number().int().min(1).max(600).default(5),
+  SEND_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(2),
+  SEND_RATE_PER_SEC: z.coerce.number().int().min(1).max(100).default(1),
+  SEND_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  /** Mails stuck in SENDING longer than this go back to PENDING. */
+  STUCK_SENDING_MIN: z.coerce.number().int().min(1).max(1440).default(10),
+  /** Interval of the "mails are dead" summary to admins (0 = off). */
+  DEAD_ALERT_INTERVAL_MIN: z.coerce.number().int().min(0).max(1440).default(15),
 });
 
 export type BaseEnv = z.infer<typeof baseEnvSchema>;

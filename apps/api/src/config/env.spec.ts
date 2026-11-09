@@ -45,7 +45,26 @@ describe('validateWorkerEnv', () => {
     const env = validateWorkerEnv({ DATABASE_URL: 'postgresql://x', MASTER_KEY: 'k' });
     expect(env.REDIS_URL).toBe('redis://localhost:6379');
     expect(env.SYNC_TICK_SEC).toBe(30);
+    expect(env).toMatchObject({
+      SEND_TICK_SEC: 5,
+      SEND_CONCURRENCY: 2,
+      SEND_RATE_PER_SEC: 1,
+      SEND_MAX_ATTEMPTS: 5,
+      STUCK_SENDING_MIN: 10,
+      DEAD_ALERT_INTERVAL_MIN: 15,
+      MAIL_TIMEZONE: 'Asia/Bangkok',
+    });
     expect(env.ERP_MAX_CONNECTIONS).toBe(2);
+  });
+
+  it('rejects unknown time zones', () => {
+    expect(() =>
+      validateWorkerEnv({
+        DATABASE_URL: 'postgresql://x',
+        MASTER_KEY: 'k',
+        MAIL_TIMEZONE: 'Mars/Base',
+      }),
+    ).toThrow();
   });
 
   it('requires DATABASE_URL and MASTER_KEY', () => {
