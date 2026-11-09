@@ -4,7 +4,9 @@ import type { ErpConnection } from '@prisma/client';
 import knex, { type Knex } from 'knex';
 import { performance } from 'node:perf_hooks';
 import { CryptoService } from '../common/crypto/crypto.service';
+import { assertSelectSql } from '../common/sql/sql-validator';
 import type { BaseEnv } from '../config/env';
+import { normalizeRow, rawResultRows, type ErpRow } from './erp-rows';
 import { buildKnexConfig, pingSql, type ErpPoolOptions } from './knex-config';
 
 export type KnexFactory = (config: Knex.Config) => Knex;
@@ -16,6 +18,14 @@ export interface PingResult {
 }
 
 const MAX_ERROR_LENGTH = 300;
+
+/** A failed ERP query; the message is already sanitized (no password). */
+export class ErpQueryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ErpQueryError';
+  }
+}
 
 /**
  * Creates and caches one Knex pool per ERP connection. A cached pool is replaced when the
@@ -77,6 +87,21 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
       };
     } finally {
       if (db) await this.destroyQuietly(db);
+    }
+  }
+
+  /**
+   * Runs an admin-supplied SELECT on the ERP (validated by SqlValidator first) and returns
+   * normalized rows: lower-case column names, JSON-safe values.
+   */
+  async query(conn: ErpConnection, sql: string): Promise<ErpRow[]> {
+    assertSelectSql(sql);
+    const db = await this.get(conn);
+    try {
+      const result: unknown = await db.raw(sql).timeout(this.options.timeoutMs);
+      return rawResultRows(conn.dbType, result).map(normalizeRow);
+    } catch (err) {
+      throw new ErpQueryError(sanitizeError(err, this.password(conn)));
     }
   }
 

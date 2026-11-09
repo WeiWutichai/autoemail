@@ -118,6 +118,33 @@ describe('ErpDataSourceFactory', () => {
   });
 });
 
+describe('ErpDataSourceFactory.query', () => {
+  it('validates the SQL before touching the ERP', async () => {
+    const { factory, createKnex } = setup();
+    await expect(factory.query(conn, 'DELETE FROM t')).rejects.toMatchObject({
+      response: { code: 'SQL_NOT_ALLOWED' },
+    });
+    expect(createKnex).not.toHaveBeenCalled();
+  });
+
+  it('returns normalized rows from the pooled instance', async () => {
+    const { factory, instances } = setup(Promise.resolve([{ DocNo: 'PR1', Amount: 10n }]));
+    await expect(factory.query(conn, 'SELECT DocNo, Amount FROM t')).resolves.toEqual([
+      { docno: 'PR1', amount: '10' },
+    ]);
+    expect(instances[0].raw).toHaveBeenCalledWith('SELECT DocNo, Amount FROM t');
+    expect(instances[0].timeout).toHaveBeenCalledWith(5000);
+  });
+
+  it('wraps driver errors without the password', async () => {
+    const { factory } = setup(Promise.reject(new Error('Invalid object name t (s3cret)')));
+    await expect(factory.query(conn, 'SELECT 1 FROM t')).rejects.toMatchObject({
+      name: 'ErpQueryError',
+      message: 'Invalid object name t (***)',
+    });
+  });
+});
+
 describe('sanitizeError', () => {
   it('joins AggregateError causes and truncates long messages', () => {
     const agg = new AggregateError([new Error('a'), new Error('b')], '');
