@@ -1,6 +1,14 @@
 'use client';
 
-import { Database, FileText, LogOut, ScrollText, ShieldCheck, Users } from 'lucide-react';
+import {
+  Database,
+  FileText,
+  LogOut,
+  RefreshCw,
+  ScrollText,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
@@ -9,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/connections', label: 'Connections', icon: Database },
+  { href: '/sync', label: 'Sync', icon: RefreshCw },
   { href: '/contacts', label: 'Contacts', icon: Users },
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/logs', label: 'Logs', icon: ScrollText },

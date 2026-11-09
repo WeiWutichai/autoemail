@@ -11,12 +11,19 @@ const MESSAGES: Record<string, string> = {
   CONNECTION_NAME_TAKEN: 'ชื่อ connection นี้ถูกใช้แล้ว',
   CONNECTION_IN_USE:
     'connection นี้มีการตั้งค่าดึงข้อมูลหรือประวัติเมลผูกอยู่ จึงลบไม่ได้ ให้ปิดการใช้งานแทน',
+  CONNECTION_INACTIVE: 'connection นี้ถูกปิดการใช้งานอยู่',
+  SYNC_CONFIG_NOT_FOUND: 'ไม่พบการตั้งค่าดึงข้อมูลนี้',
+  SYNC_IN_PROGRESS: 'กำลังดึงข้อมูลอยู่ กรุณารอสักครู่',
+  SQL_NOT_ALLOWED: 'SQL ต้องเป็นคำสั่ง SELECT เดียวเท่านั้น (ห้าม ; INSERT UPDATE DELETE EXEC ฯลฯ)',
+  ERP_QUERY_FAILED: 'รัน query บน ERP ไม่สำเร็จ',
 };
 
 /** Thai message for an error thrown by the API client. */
 export function errorMessage(err: unknown): string {
   if (err instanceof ApiClientError) {
-    return MESSAGES[err.code] ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+    const base = MESSAGES[err.code] ?? 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง';
+    // Driver messages (already sanitized by the API) help the admin fix the query.
+    return err.code === 'ERP_QUERY_FAILED' ? `${base}: ${err.message}` : base;
   }
   return 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้';
 }
