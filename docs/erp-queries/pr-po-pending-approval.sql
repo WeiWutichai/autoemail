@@ -1,7 +1,7 @@
 -- Outbox query: PR / PO not yet approved (SQL Server)
--- Source: ERP team query (2026-11-09), rewritten as a single SELECT so it passes SqlValidator
+-- Source: ERP team query (2026-11-09, rev 2 adds IsComplete <> 1), rewritten as a single SELECT so it passes SqlValidator
 -- (no temp table / DROP / multi-statement). Row filter is kept identical to the original script:
---   * documents with IsApproved = 0 (any status: waiting, checked, completed, closed)
+--   * documents with IsApproved = 0 AND IsComplete <> 1 (waiting, checked, closed; NULL IsComplete is excluded as in the original)
 --   * DeptCode not blank
 --   * recipients: every Z_MaIL row of the document's department
 -- Only technical addition: rows without an email are skipped (nothing to send to).
@@ -43,7 +43,7 @@ FROM (
         ISNULL(S.IsApproved, 0)         AS approved,
         ISNULL(S.IsApprovedBy, ' ')     AS approved_by
     FROM PurchaseRequisitionHdr S WITH (NOLOCK)
-    WHERE S.IsApproved = 0
+    WHERE S.IsApproved = 0 AND S.IsComplete <> 1
 
     UNION ALL
 
@@ -65,7 +65,7 @@ FROM (
         ISNULL(S.IsApproved, 0)         AS approved,
         ISNULL(S.Appr_By, ' ')          AS approved_by
     FROM PurchaseOrderHdr S WITH (NOLOCK)
-    WHERE S.IsApproved = 0
+    WHERE S.IsApproved = 0 AND S.IsComplete <> 1
 ) d
 INNER JOIN Z_MaIL m WITH (NOLOCK)
     ON m.DeptCode = d.dept_code
