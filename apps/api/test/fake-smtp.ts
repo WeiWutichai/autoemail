@@ -20,6 +20,8 @@ export class FakeSmtp {
       authOptional: true,
       disabledCommands: ['STARTTLS'],
       logger: false,
+      // Do not wait for pooled client connections when stopping.
+      closeTimeout: 100,
       onAuth: (_auth, _session, cb) => cb(null, { user: 'test' }),
       onRcptTo: (address, _session, cb) => {
         if (this.rejectRecipients.has(address.address)) {

@@ -19,6 +19,7 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 60000,
     env: {
+      TZ: 'UTC',
       NODE_ENV: 'test',
       DATABASE_URL: testDatabaseUrl,
       MASTER_KEY: Buffer.alloc(32, 7).toString('base64'),
@@ -28,6 +29,8 @@ export default defineConfig({
       JWT_REFRESH_TTL: '7d',
       REDIS_URL: testRedisUrl,
       SYNC_TICK_SEC: '1',
+      SEND_TICK_SEC: '1',
+      SEND_RATE_PER_SEC: '50',
     },
   },
 });
