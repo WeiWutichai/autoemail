@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { ErpConnection } from '@prisma/client';
 import type { Knex } from 'knex';
@@ -97,6 +98,16 @@ describe('ErpDataSourceFactory', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toBe("Login failed for user 'reader' with password ***");
     expect(instances[0].destroy).toHaveBeenCalled();
+  });
+
+  it('routes knex logging through the Nest logger without the password', async () => {
+    const { factory, createKnex } = setup();
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    await factory.testConnection(conn);
+    const log = createKnex.mock.calls[0][0].log as { error: (m: unknown) => void };
+    log.error(new Error('auth failed for s3cret'));
+    expect(warn).toHaveBeenCalledWith('auth failed for ***');
+    warn.mockRestore();
   });
 
   it('works without a stored password', async () => {

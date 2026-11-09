@@ -47,7 +47,7 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
     if (cached?.version === version) return cached.db;
 
     if (cached) await this.destroyQuietly(cached.db);
-    const db = this.createKnex(buildKnexConfig(conn, this.password(conn), this.options));
+    const db = this.build(conn, this.password(conn), this.options);
     this.pools.set(conn.id, { version, db });
     return db;
   }
@@ -66,7 +66,7 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
     const password = this.password(conn);
     let db: Knex | undefined;
     try {
-      db = this.createKnex(buildKnexConfig(conn, password, { ...this.options, maxConnections: 1 }));
+      db = this.build(conn, password, { ...this.options, maxConnections: 1 });
       await db.raw(pingSql(conn.dbType)).timeout(this.options.timeoutMs);
       return { ok: true, latencyMs: Math.round(performance.now() - started) };
     } catch (err) {
@@ -84,6 +84,16 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
     const pools = [...this.pools.values()];
     this.pools.clear();
     await Promise.all(pools.map(({ db }) => this.destroyQuietly(db)));
+  }
+
+  /** Creates a Knex instance whose own console logging goes through the Nest logger, sanitized. */
+  private build(conn: ErpConnection, password: string | undefined, options: ErpPoolOptions): Knex {
+    const log = (level: 'warn' | 'debug') => (message: unknown) =>
+      this.logger[level](sanitizeError(message, password));
+    return this.createKnex({
+      ...buildKnexConfig(conn, password, options),
+      log: { warn: log('warn'), error: log('warn'), deprecate: log('debug'), debug: log('debug') },
+    });
   }
 
   private password(conn: ErpConnection): string | undefined {
