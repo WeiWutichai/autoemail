@@ -163,7 +163,7 @@ describe('ERP connections (e2e)', () => {
 
     const { body: used } = await api().post('/connections').send(erp).expect(201);
     await prisma.erpSyncConfig.create({
-      data: { connectionId: used.id, kind: 'OUTBOX', querySql: 'SELECT 1' },
+      data: { connectionId: used.id, name: 'PR/PO', kind: 'OUTBOX', querySql: 'SELECT 1' },
     });
     const res = await api().delete(`/connections/${used.id}`).expect(409);
     expect(res.body).toMatchObject({

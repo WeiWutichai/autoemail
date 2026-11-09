@@ -99,6 +99,7 @@ model ErpConnection {
 model ErpSyncConfig {
   id              String    @id @default(uuid()) @db.Uuid
   connectionId    String    @map("connection_id") @db.Uuid
+  name            String
   kind            SyncKind
   querySql        String?   @map("query_sql")
   columnMapping   Json?     @map("column_mapping")
@@ -106,6 +107,9 @@ model ErpSyncConfig {
   isActive        Boolean   @default(true) @map("is_active")
   lastSyncedAt    DateTime? @map("last_synced_at")
   lastCursor      String?   @map("last_cursor")
+  /// Counts of the last run: { fetched, created, updated, skipped, errors, durationMs, messages[] }.
+  lastResult      Json?     @map("last_result")
+  lastError       String?   @map("last_error")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
