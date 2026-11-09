@@ -5,9 +5,11 @@ import { AdminUsersModule } from './admin-users/admin-users.module';
 import { AuthModule } from './auth/auth.module';
 import { CryptoModule } from './common/crypto/crypto.module';
 import { ConnectionsModule } from './connections/connections.module';
+import { ContactsModule } from './contacts/contacts.module';
 import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SyncConfigsModule } from './sync/sync-configs.module';
 
 @Module({
   imports: [
