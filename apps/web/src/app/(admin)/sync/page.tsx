@@ -4,6 +4,7 @@ import { REQUIRED_COLUMNS, type SyncConfigDto, type SyncKind } from '@erp-mail/s
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { CheckboxField } from '@/components/checkbox-field';
+import { QueryExplain } from '@/components/query-explain';
 import { QueryPreview } from '@/components/query-preview';
 import { SyncStatus, toastSyncResult } from '@/components/sync-result';
 import { Badge } from '@/components/ui/badge';
@@ -222,6 +223,7 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
                 preview.reset();
               }}
             />
+            <QueryExplain sql={form.querySql} kind={form.kind} />
             <p className="text-xs text-muted-foreground">{KIND_HINTS[form.kind]}</p>
             <p className="text-xs text-muted-foreground">
               ต้องมี: {REQUIRED_COLUMNS[form.kind].join(', ')}
