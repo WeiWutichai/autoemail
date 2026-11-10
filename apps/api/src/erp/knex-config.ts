@@ -14,6 +14,13 @@ export interface ErpPoolOptions {
 
 const APP_NAME = 'erp-mail-relay';
 
+/**
+ * Extra time the pool waits beyond the driver's own connect timeout, so the driver's
+ * specific error (login failed, host unreachable, instance not found) is reported
+ * instead of Knex's generic "Timeout acquiring a connection".
+ */
+export const ACQUIRE_GRACE_MS = 5_000;
+
 /** Splits `SERVER\INSTANCE` (SQL Server named instance) into its parts. */
 export function splitMssqlHost(host: string): { server: string; instanceName?: string } {
   const idx = host.indexOf('\\');
@@ -28,7 +35,7 @@ export function buildKnexConfig(
   opts: ErpPoolOptions,
 ): Knex.Config {
   const pool = { min: 0, max: opts.maxConnections, idleTimeoutMillis: 60_000 };
-  const common = { pool, acquireConnectionTimeout: opts.timeoutMs };
+  const common = { pool, acquireConnectionTimeout: opts.timeoutMs + ACQUIRE_GRACE_MS };
 
   switch (conn.dbType) {
     case 'MSSQL': {

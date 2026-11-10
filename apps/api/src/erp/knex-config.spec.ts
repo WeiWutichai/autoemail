@@ -16,10 +16,11 @@ describe('buildKnexConfig', () => {
     const cfg = buildKnexConfig({ ...base, ssl: true, trustServerCert: true }, 'pw', opts);
     expect(cfg.client).toBe('mssql');
     expect(cfg.pool).toMatchObject({ min: 0, max: 2 });
-    expect(cfg.acquireConnectionTimeout).toBe(10_000);
+    expect(cfg.acquireConnectionTimeout).toBe(15_000);
     expect(cfg.connection).toMatchObject({
       server: 'erp.local',
       port: 1433,
+      connectionTimeout: 10_000,
       user: 'reader',
       password: 'pw',
       database: 'ERP',
