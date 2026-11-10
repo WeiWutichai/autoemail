@@ -16,6 +16,7 @@ export const SYNC_KIND_LABELS: Record<SyncKind, string> = {
 export interface SyncForm {
   connectionId: string;
   name: string;
+  description: string;
   kind: SyncKind;
   querySql: string;
   /** One `target=source` per line or comma. */
@@ -35,6 +36,7 @@ export function emptySyncForm(connectionId = '', kind: SyncKind = 'CONTACTS'): S
   return {
     connectionId,
     name: '',
+    description: '',
     kind,
     querySql: '',
     mapping: '',
@@ -57,6 +59,7 @@ export function formFromSyncConfig(config: SyncConfigDto): SyncForm {
   return {
     connectionId: config.connectionId,
     name: config.name,
+    description: config.description ?? '',
     kind: config.kind,
     querySql: config.querySql,
     mapping: formatMapping(config.columnMapping),
@@ -95,6 +98,7 @@ function intervalSec(text: string): number {
 const FIELD_ERRORS: Record<string, string> = {
   connectionId: 'กรุณาเลือก connection',
   name: 'กรุณากรอกชื่อ',
+  description: 'คำอธิบายยาวได้ไม่เกิน 500 ตัวอักษร',
   querySql: 'กรุณากรอก SQL query',
   pollIntervalSec: 'รอบเวลาต้องอยู่ระหว่าง 1 นาที ถึง 1 วัน (1440 นาที)',
   columnMapping: 'ชื่อคอลัมน์ใน mapping ใช้ได้เฉพาะ A-Z, 0-9 และ _',
@@ -112,6 +116,7 @@ export function toCreateSyncInput(form: SyncForm): FormResult<CreateSyncConfigIn
   const parsed = createSyncConfigSchema.safeParse({
     connectionId: form.connectionId,
     name: form.name,
+    description: form.description,
     kind: form.kind,
     querySql: form.querySql,
     columnMapping: mapping.data,
@@ -134,6 +139,9 @@ export function toUpdateSyncInput(
   if (!mapping.ok) return mapping;
   const candidate: Record<string, unknown> = {};
   if (form.name.trim() !== original.name) candidate.name = form.name;
+  if ((form.description.trim() || null) !== original.description) {
+    candidate.description = form.description;
+  }
   if (form.querySql.trim() !== original.querySql) candidate.querySql = form.querySql;
   if (JSON.stringify(mapping.data) !== JSON.stringify(original.columnMapping)) {
     candidate.columnMapping = mapping.data;
@@ -155,6 +163,10 @@ export function toUpdateSyncInput(
     ? { ok: true, data: parsed.data }
     : { ok: false, error: firstError(parsed.error.issues) };
 }
+
+/** Description filled in together with {@link PR_PO_QUERY}. */
+export const PR_PO_DESCRIPTION =
+  'PR / PO ที่ยังไม่อนุมัติ (ไม่รวมใบที่ปิดงานหรือยกเลิก) ส่งแจ้งทุกอีเมลของแผนกเจ้าของเอกสารในตาราง Z_MaIL — เอกสารละ 1 ฉบับต่อผู้รับ';
 
 /** docs/erp-queries/pr-po-pending-approval.sql (SQL Server) — PR / PO waiting for approval. */
 export const PR_PO_QUERY = `SELECT

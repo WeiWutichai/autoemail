@@ -100,3 +100,36 @@ describe('toUpdateSyncInput', () => {
     });
   });
 });
+
+describe('description', () => {
+  it('sends trimmed text on create and null when blank', () => {
+    const form = { ...emptySyncForm(connectionId), name: 'X', querySql: 'SELECT 1' };
+    expect(toCreateSyncInput({ ...form, description: '  อีเมลแผนก ' })).toMatchObject({
+      ok: true,
+      data: { description: 'อีเมลแผนก' },
+    });
+    expect(toCreateSyncInput(form)).toMatchObject({ ok: true, data: { description: null } });
+    expect(toCreateSyncInput({ ...form, description: 'x'.repeat(501) })).toEqual({
+      ok: false,
+      error: 'คำอธิบายยาวได้ไม่เกิน 500 ตัวอักษร',
+    });
+  });
+
+  it('sends the description on update only when it changed, clearing to null', () => {
+    const described = { ...config, description: 'อีเมลแผนก' };
+    const form = formFromSyncConfig(described);
+    expect(form.description).toBe('อีเมลแผนก');
+    expect(toUpdateSyncInput({ ...form, description: ' อีเมลแผนก ' }, described)).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect(toUpdateSyncInput({ ...form, description: '' }, described)).toEqual({
+      ok: true,
+      data: { description: null },
+    });
+    expect(toUpdateSyncInput({ ...form, description: 'ใหม่' }, config)).toEqual({
+      ok: true,
+      data: { description: 'ใหม่' },
+    });
+  });
+});

@@ -44,6 +44,7 @@ import {
   emptySyncForm,
   formFromSyncConfig,
   parseMapping,
+  PR_PO_DESCRIPTION,
   PR_PO_QUERY,
   SYNC_KIND_LABELS,
   toCreateSyncInput,
@@ -189,6 +190,21 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="sync-description">คำอธิบาย (ไม่บังคับ)</Label>
+            <Textarea
+              id="sync-description"
+              rows={2}
+              maxLength={500}
+              placeholder="เช่น PR / PO ที่ยังไม่อนุมัติ ส่งแจ้งอีเมลของแผนกเจ้าของเอกสาร"
+              value={form.description}
+              onChange={(e) => set({ description: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              อธิบายเป็นภาษาคนว่า query นี้ดึงเอกสารอะไร และส่งถึงใคร — แสดงในตาราง Sync
+            </p>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="sync-sql">SQL query</Label>
             <Textarea
               id="sync-sql"
@@ -217,7 +233,10 @@ function SyncDialog({ target, onClose }: { target: DialogTarget; onClose: () => 
                 size="sm"
                 className="h-auto p-0"
                 onClick={() => {
-                  set({ querySql: PR_PO_QUERY });
+                  set({
+                    querySql: PR_PO_QUERY,
+                    ...(form.description.trim() ? {} : { description: PR_PO_DESCRIPTION }),
+                  });
                   preview.reset();
                 }}
               >
@@ -432,7 +451,14 @@ export default function SyncPage() {
           )}
           {configs?.map((config) => (
             <TableRow key={config.id}>
-              <TableCell className="font-medium">{config.name}</TableCell>
+              <TableCell className="max-w-xs">
+                <div className="font-medium">{config.name}</div>
+                {config.description && (
+                  <div className="whitespace-pre-wrap text-xs text-muted-foreground">
+                    {config.description}
+                  </div>
+                )}
+              </TableCell>
               <TableCell>{config.connectionName}</TableCell>
               <TableCell>
                 <div>{SYNC_KIND_LABELS[config.kind]}</div>
