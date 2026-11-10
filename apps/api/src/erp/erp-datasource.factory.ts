@@ -7,7 +7,12 @@ import { CryptoService } from '../common/crypto/crypto.service';
 import { assertSelectSql } from '../common/sql/sql-validator';
 import type { BaseEnv } from '../config/env';
 import { normalizeRow, rawResultRows, type ErpRow } from './erp-rows';
-import { buildKnexConfig, pingSql, type ErpPoolOptions } from './knex-config';
+import {
+  buildKnexConfig,
+  pingSql,
+  type ErpConnectionConfig,
+  type ErpPoolOptions,
+} from './knex-config';
 
 export type KnexFactory = (config: Knex.Config) => Knex;
 
@@ -71,13 +76,20 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
   }
 
   /** Opens a throwaway single-connection pool and runs a ping query. Never throws. */
-  async testConnection(conn: ErpConnection): Promise<PingResult> {
+  testConnection(conn: ErpConnection): Promise<PingResult> {
+    return this.testConfig(conn, this.password(conn));
+  }
+
+  /**
+   * Same as `testConnection` for settings that are not saved yet (the edit dialog).
+   * `password` is plain text and only used for this one attempt.
+   */
+  async testConfig(config: ErpConnectionConfig, password: string | undefined): Promise<PingResult> {
     const started = performance.now();
-    const password = this.password(conn);
     let db: Knex | undefined;
     try {
-      db = this.build(conn, password, { ...this.options, maxConnections: 1 });
-      await db.raw(pingSql(conn.dbType)).timeout(this.options.timeoutMs);
+      db = this.build(config, password, { ...this.options, maxConnections: 1 });
+      await db.raw(pingSql(config.dbType)).timeout(this.options.timeoutMs);
       return { ok: true, latencyMs: Math.round(performance.now() - started) };
     } catch (err) {
       return {
@@ -112,7 +124,11 @@ export class ErpDataSourceFactory implements OnModuleDestroy {
   }
 
   /** Creates a Knex instance whose own console logging goes through the Nest logger, sanitized. */
-  private build(conn: ErpConnection, password: string | undefined, options: ErpPoolOptions): Knex {
+  private build(
+    conn: ErpConnectionConfig,
+    password: string | undefined,
+    options: ErpPoolOptions,
+  ): Knex {
     const log = (level: 'warn' | 'debug') => (message: unknown) =>
       this.logger[level](sanitizeError(message, password));
     return this.createKnex({

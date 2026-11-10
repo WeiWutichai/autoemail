@@ -3,6 +3,7 @@ import type {
   CreateErpConnectionInput,
   ErpConnectionDto,
   TestConnectionResult,
+  TestErpConnectionDraftInput,
   UpdateErpConnectionInput,
 } from '@erp-mail/shared';
 import { Prisma, type ErpConnection } from '@prisma/client';
@@ -101,6 +102,21 @@ export class ConnectionsService {
     });
     this.logger.log(`ERP connection test id=${id} ok=${result.ok} latencyMs=${result.latencyMs}`);
     return { ...result, testedAt: testedAt.toISOString() };
+  }
+
+  /** Tests unsaved settings; nothing is stored. Blank password falls back to the stored one. */
+  async testDraft(input: TestErpConnectionDraftInput): Promise<TestConnectionResult> {
+    const { connectionId, password, ...config } = input;
+    let secret = password;
+    if (secret === undefined && connectionId) {
+      const stored = await this.findOrThrow(connectionId);
+      secret = stored.passwordEnc ? this.crypto.decrypt(stored.passwordEnc) : undefined;
+    }
+    const result = await this.datasources.testConfig(config, secret);
+    this.logger.log(
+      `ERP connection draft test id=${connectionId ?? 'new'} ok=${result.ok} latencyMs=${result.latencyMs}`,
+    );
+    return { ...result, testedAt: new Date().toISOString() };
   }
 
   private async findOrThrow(id: string): Promise<ErpConnection> {

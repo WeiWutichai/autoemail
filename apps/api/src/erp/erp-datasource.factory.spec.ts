@@ -110,6 +110,15 @@ describe('ErpDataSourceFactory', () => {
     warn.mockRestore();
   });
 
+  it('tests unsaved settings with a plain password and hides it in errors', async () => {
+    const { factory, createKnex, crypto } = setup(Promise.reject(new Error('bad typed-pw')));
+    const { passwordEnc: _ignored, ...config } = conn;
+    const result = await factory.testConfig(config, 'typed-pw');
+    expect(crypto.decrypt).not.toHaveBeenCalled();
+    expect(createKnex.mock.calls[0][0].connection).toMatchObject({ password: 'typed-pw' });
+    expect(result).toMatchObject({ ok: false, error: 'bad ***' });
+  });
+
   it('works without a stored password', async () => {
     const { factory, createKnex, crypto } = setup();
     await factory.testConnection({ ...conn, passwordEnc: null });

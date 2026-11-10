@@ -2,6 +2,7 @@ import type {
   CreateErpConnectionInput,
   ErpConnectionDto,
   TestConnectionResult,
+  TestErpConnectionDraftInput,
   UpdateErpConnectionInput,
 } from '@erp-mail/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -48,5 +49,13 @@ export function useTestConnection() {
     mutationFn: (id: string) =>
       api.request<TestConnectionResult>(`/connections/${id}/test`, { method: 'POST' }),
     onSettled: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
+/** Tests unsaved dialog settings; nothing is stored, so no cache invalidation. */
+export function useTestConnectionDraft() {
+  return useMutation({
+    mutationFn: (input: TestErpConnectionDraftInput) =>
+      api.request<TestConnectionResult>('/connections/test', { method: 'POST', json: input }),
   });
 }

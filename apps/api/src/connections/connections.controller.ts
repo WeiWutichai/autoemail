@@ -12,10 +12,12 @@ import {
 } from '@nestjs/common';
 import {
   createErpConnectionSchema,
+  testErpConnectionDraftSchema,
   updateErpConnectionSchema,
   type CreateErpConnectionInput,
   type ErpConnectionDto,
   type TestConnectionResult,
+  type TestErpConnectionDraftInput,
   type UpdateErpConnectionInput,
 } from '@erp-mail/shared';
 import { Audit } from '../audit/audit.decorator';
@@ -29,6 +31,15 @@ export class ConnectionsController {
   @Get()
   list(): Promise<ErpConnectionDto[]> {
     return this.connections.list();
+  }
+
+  /** Tests settings from the dialog before they are saved. */
+  @Post('test')
+  @HttpCode(HttpStatus.OK)
+  testDraft(
+    @Body(new ZodValidationPipe(testErpConnectionDraftSchema)) body: TestErpConnectionDraftInput,
+  ): Promise<TestConnectionResult> {
+    return this.connections.testDraft(body);
   }
 
   @Get(':id')

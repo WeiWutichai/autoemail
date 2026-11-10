@@ -1,6 +1,11 @@
 'use client';
 
-import { DB_TYPES, type DbType, type ErpConnectionDto } from '@erp-mail/shared';
+import {
+  DB_TYPES,
+  type DbType,
+  type ErpConnectionDto,
+  type TestConnectionResult,
+} from '@erp-mail/shared';
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +34,7 @@ import {
   emptyConnectionForm,
   formFromConnection,
   toCreateInput,
+  toTestDraftInput,
   toUpdateInput,
   type ConnectionForm,
 } from '@/lib/connection-form';
@@ -37,6 +43,7 @@ import {
   useCreateConnection,
   useDeleteConnection,
   useTestConnection,
+  useTestConnectionDraft,
   useUpdateConnection,
 } from '@/lib/connections';
 import { errorMessage } from '@/lib/error-messages';
@@ -83,9 +90,26 @@ function ConnectionDialog({ target, onClose }: { target: DialogTarget; onClose: 
   const [form, setForm] = useState<ConnectionForm>(() =>
     editing ? formFromConnection(editing) : emptyConnectionForm(),
   );
+  const testDraft = useTestConnectionDraft();
   const [error, setError] = useState<string | null>(null);
-  const set = (patch: Partial<ConnectionForm>) => setForm((f) => ({ ...f, ...patch }));
+  const [testResult, setTestResult] = useState<TestConnectionResult | null>(null);
+  const set = (patch: Partial<ConnectionForm>) => {
+    setForm((f) => ({ ...f, ...patch }));
+    setTestResult(null);
+  };
   const pending = create.isPending || update.isPending;
+
+  const onTest = async () => {
+    setError(null);
+    setTestResult(null);
+    const result = toTestDraftInput(form, editing?.id);
+    if (!result.ok) return setError(result.error);
+    try {
+      setTestResult(await testDraft.mutateAsync(result.data));
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -136,7 +160,10 @@ function ConnectionDialog({ target, onClose }: { target: DialogTarget; onClose: 
               id="conn-type"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               value={form.dbType}
-              onChange={(e) => setForm((f) => changeDbType(f, e.target.value as DbType))}
+              onChange={(e) => {
+                setForm((f) => changeDbType(f, e.target.value as DbType));
+                setTestResult(null);
+              }}
             >
               {DB_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -169,7 +196,8 @@ function ConnectionDialog({ target, onClose }: { target: DialogTarget; onClose: 
           {isMssql && (
             <p className="-mt-2 text-xs text-muted-foreground">
               ถ้าใช้ named instance ให้ใส่ชื่อ instance ต่อท้าย host (เช่น SERVER\SQLEXPRESS)
-              ระบบจะไม่ใช้ port
+              ระบบจะไม่ใช้ port และต้องเปิด SQL Server Browser (UDP 1434) —
+              ถ้าเชื่อมต่อผ่านอินเทอร์เน็ต แนะนำให้ใส่แค่ IP กับ port ของ instance แทน
             </p>
           )}
 
@@ -232,14 +260,45 @@ function ConnectionDialog({ target, onClose }: { target: DialogTarget; onClose: 
             />
           </div>
 
+          {testResult && (
+            <div
+              role="status"
+              className={
+                testResult.ok
+                  ? 'rounded-md border border-primary/30 bg-primary/5 p-3 text-sm'
+                  : 'rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm'
+              }
+            >
+              {testResult.ok ? (
+                <p className="font-medium">เชื่อมต่อได้ ({testResult.latencyMs} ms)</p>
+              ) : (
+                <>
+                  <p className="font-medium text-destructive">เชื่อมต่อไม่ได้</p>
+                  {testResult.error && (
+                    <p className="mt-1 break-words text-muted-foreground">{testResult.error}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              ยกเลิก
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={testDraft.isPending}
+              onClick={onTest}
+            >
+              {testDraft.isPending ? 'กำลังทดสอบ…' : 'ทดสอบการเชื่อมต่อ'}
             </Button>
-            <Button type="submit" disabled={pending}>
-              บันทึก
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={onClose}>
+                ยกเลิก
+              </Button>
+              <Button type="submit" disabled={pending}>
+                บันทึก
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>

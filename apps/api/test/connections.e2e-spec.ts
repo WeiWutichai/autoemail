@@ -139,6 +139,36 @@ describe('ERP connections (e2e)', () => {
     expect(after.body.lastTestOk).toBe(false);
   });
 
+  it('tests unsaved settings from the dialog without storing anything', async () => {
+    const { name: _name, ...settings } = erp;
+    const ok = await api().post('/connections/test').send(settings).expect(200);
+    expect(ok.body).toMatchObject({ ok: true });
+
+    const wrongPassword = 'draft-wrong-pw-456';
+    const bad = await api()
+      .post('/connections/test')
+      .send({ ...settings, password: wrongPassword })
+      .expect(200);
+    expect(bad.body.ok).toBe(false);
+    expect(bad.body.error).not.toContain(wrongPassword);
+
+    // Editing with a blank password reuses the stored one; the saved test status is untouched.
+    const { body: conn } = await api().post('/connections').send(erp).expect(201);
+    const { password: _pw, ...withoutPassword } = settings;
+    const reuse = await api()
+      .post('/connections/test')
+      .send({ ...withoutPassword, connectionId: conn.id })
+      .expect(200);
+    expect(reuse.body.ok).toBe(true);
+    const after = await api().get(`/connections/${conn.id}`).expect(200);
+    expect(after.body.lastTestAt).toBeNull();
+
+    await api()
+      .post('/connections/test')
+      .send({ ...settings, host: '' })
+      .expect(400);
+  });
+
   it('keeps the password when it is omitted on update and resets the test status', async () => {
     const { body: conn } = await api().post('/connections').send(erp).expect(201);
     await api().post(`/connections/${conn.id}/test`).expect(200);

@@ -77,6 +77,23 @@ export const updateErpConnectionSchema = z
   });
 export type UpdateErpConnectionInput = z.infer<typeof updateErpConnectionSchema>;
 
+/**
+ * Tests settings from the connection dialog before saving. Without `password`, the stored
+ * password of `connectionId` is used (editing an existing connection).
+ */
+export const testErpConnectionDraftSchema = z.object({
+  connectionId: z.string().uuid().optional(),
+  dbType: dbTypeSchema,
+  host: hostField,
+  port: portField,
+  database: databaseField,
+  username: usernameField,
+  password: passwordField.optional(),
+  ssl: z.boolean().default(false),
+  trustServerCert: z.boolean().default(false),
+});
+export type TestErpConnectionDraftInput = z.infer<typeof testErpConnectionDraftSchema>;
+
 export const testConnectionResultSchema = z.object({
   ok: z.boolean(),
   testedAt: z.string(),

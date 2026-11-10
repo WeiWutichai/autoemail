@@ -1,10 +1,12 @@
 import {
   createErpConnectionSchema,
   DEFAULT_PORTS,
+  testErpConnectionDraftSchema,
   updateErpConnectionSchema,
   type CreateErpConnectionInput,
   type DbType,
   type ErpConnectionDto,
+  type TestErpConnectionDraftInput,
   type UpdateErpConnectionInput,
 } from '@erp-mail/shared';
 
@@ -116,4 +118,25 @@ export function toUpdateInput(
   if (Object.keys(changes).length === 0) return { ok: true, data: null };
   const parsed = updateErpConnectionSchema.safeParse(changes);
   return parsed.success ? { ok: true, data: parsed.data } : { ok: false, error: INVALID };
+}
+
+const INVALID_TEST = 'กรุณากรอก Host, Port (1–65535), Database และ Username ให้ครบก่อนทดสอบ';
+
+/** Settings to test from the dialog; a blank password while editing uses the stored one. */
+export function toTestDraftInput(
+  form: ConnectionForm,
+  connectionId?: string,
+): FormResult<TestErpConnectionDraftInput> {
+  const parsed = testErpConnectionDraftSchema.safeParse({
+    connectionId,
+    dbType: form.dbType,
+    host: form.host,
+    port: toPort(form.port),
+    database: form.database,
+    username: form.username,
+    password: form.password === '' ? undefined : form.password,
+    ssl: form.ssl,
+    trustServerCert: form.trustServerCert,
+  });
+  return parsed.success ? { ok: true, data: parsed.data } : { ok: false, error: INVALID_TEST };
 }

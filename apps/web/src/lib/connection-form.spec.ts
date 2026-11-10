@@ -4,6 +4,7 @@ import {
   emptyConnectionForm,
   formFromConnection,
   toCreateInput,
+  toTestDraftInput,
   toUpdateInput,
 } from './connection-form';
 
@@ -68,5 +69,43 @@ describe('connection form', () => {
 
   it('returns null data when nothing changed', () => {
     expect(toUpdateInput(formFromConnection(dto), dto)).toEqual({ ok: true, data: null });
+  });
+});
+
+describe('toTestDraftInput', () => {
+  const form = {
+    ...emptyConnectionForm(),
+    name: '',
+    host: '43.229.134.162',
+    database: 'db_ENSHU',
+    username: 'sa',
+  };
+
+  it('does not require a name and sends the typed password', () => {
+    const result = toTestDraftInput({ ...form, password: 'pw' });
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        dbType: 'MSSQL',
+        host: '43.229.134.162',
+        port: 1433,
+        database: 'db_ENSHU',
+        username: 'sa',
+        password: 'pw',
+        ssl: false,
+        trustServerCert: false,
+      },
+    });
+  });
+
+  it('omits a blank password and passes the connection id when editing', () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const result = toTestDraftInput(form, id);
+    expect(result.ok && result.data).toMatchObject({ connectionId: id });
+    expect(result.ok && 'password' in result.data && result.data.password).toBeFalsy();
+  });
+
+  it('rejects an incomplete form', () => {
+    expect(toTestDraftInput({ ...form, host: '' }).ok).toBe(false);
   });
 });

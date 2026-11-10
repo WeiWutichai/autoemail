@@ -50,10 +50,14 @@ function setup() {
     contact: { count: vi.fn().mockResolvedValue(0) },
     mailQueue: { count: vi.fn().mockResolvedValue(0) },
   };
-  const crypto = { encrypt: vi.fn((v: string) => `enc:${v}`) };
+  const crypto = {
+    encrypt: vi.fn((v: string) => `enc:${v}`),
+    decrypt: vi.fn((v: string) => v.replace(/^enc:/, '')),
+  };
   const datasources = {
     invalidate: vi.fn().mockResolvedValue(undefined),
     testConnection: vi.fn(),
+    testConfig: vi.fn().mockResolvedValue({ ok: true, latencyMs: 7 }),
   };
   const service = new ConnectionsService(
     prisma as unknown as PrismaService,
@@ -173,6 +177,40 @@ describe('ConnectionsService', () => {
     expect(data.lastTestAt.toISOString()).toBe(result.testedAt);
   });
 
+  const draft = {
+    dbType: 'MSSQL' as const,
+    host: '10.0.0.5',
+    port: 1433,
+    database: 'ERP',
+    username: 'reader',
+    ssl: false,
+    trustServerCert: false,
+  };
+
+  it('tests unsaved settings with the typed password without storing anything', async () => {
+    const { prisma, datasources, service } = setup();
+    const result = await service.testDraft({ ...draft, password: 'typed' });
+    expect(result).toMatchObject({ ok: true, latencyMs: 7 });
+    expect(datasources.testConfig).toHaveBeenCalledWith(draft, 'typed');
+    expect(prisma.erpConnection.findUnique).not.toHaveBeenCalled();
+    expect(prisma.erpConnection.update).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the stored password when editing with a blank password', async () => {
+    const { prisma, datasources, service } = setup();
+    prisma.erpConnection.findUnique.mockResolvedValue(conn);
+    await service.testDraft({ ...draft, connectionId: conn.id });
+    expect(datasources.testConfig).toHaveBeenCalledWith(draft, 'secret');
+    expect(prisma.erpConnection.update).not.toHaveBeenCalled();
+  });
+
+  it('tests a new connection without a password', async () => {
+    const { datasources, crypto, service } = setup();
+    await service.testDraft(draft);
+    expect(datasources.testConfig).toHaveBeenCalledWith(draft, undefined);
+    expect(crypto.decrypt).not.toHaveBeenCalled();
+  });
+
   it('returns 404 CONNECTION_NOT_FOUND for unknown ids', async () => {
     const { prisma, service } = setup();
     prisma.erpConnection.findUnique.mockResolvedValue(null);
@@ -182,6 +220,7 @@ describe('ConnectionsService', () => {
       () => service.update(conn.id, { name: 'x' }),
       () => service.remove(conn.id),
       () => service.test(conn.id),
+      () => service.testDraft({ ...draft, connectionId: conn.id }),
     ]) {
       await expect(call()).rejects.toBeInstanceOf(NotFoundException);
     }
