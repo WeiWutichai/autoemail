@@ -100,6 +100,8 @@ model ErpSyncConfig {
   id              String    @id @default(uuid()) @db.Uuid
   connectionId    String    @map("connection_id") @db.Uuid
   name            String
+  /// Plain-language summary for admins of what the query fetches and who receives it.
+  description     String?
   kind            SyncKind
   querySql        String?   @map("query_sql")
   columnMapping   Json?     @map("column_mapping")

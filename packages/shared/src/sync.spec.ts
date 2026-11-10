@@ -13,6 +13,7 @@ describe('sync config schemas', () => {
     });
     expect(parsed).toMatchObject({
       name: 'Contacts',
+      description: null,
       columnMapping: null,
       pollIntervalSec: 300,
       isActive: true,
@@ -36,6 +37,18 @@ describe('sync config schemas', () => {
     expect(missing.success).toBe(false);
     expect(missing.error?.issues[0].path).toEqual(['templateId']);
     expect(createSyncConfigSchema.parse({ ...base, templateId: id }).smtpConfigId).toBeNull();
+  });
+
+  it('trims the description, stores blank text as null and caps its length', () => {
+    const base = { connectionId: id, name: 'x', kind: 'CONTACTS', querySql: 'SELECT 1' };
+    expect(
+      createSyncConfigSchema.parse({ ...base, description: '  PR ที่รออนุมัติ ' }).description,
+    ).toBe('PR ที่รออนุมัติ');
+    expect(createSyncConfigSchema.parse({ ...base, description: '   ' }).description).toBeNull();
+    expect(updateSyncConfigSchema.parse({ description: '' })).toEqual({ description: null });
+    expect(
+      createSyncConfigSchema.safeParse({ ...base, description: 'x'.repeat(501) }).success,
+    ).toBe(false);
   });
 
   it('requires at least one field on update', () => {

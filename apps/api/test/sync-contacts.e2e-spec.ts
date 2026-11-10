@@ -139,11 +139,21 @@ describe('Sync configs + contacts (e2e)', () => {
 
   it('updates and deletes a config', async () => {
     const { body: config } = await createConfig().expect(201);
+    expect(config.description).toBeNull();
     const updated = await api
       .patch(`/sync-configs/${config.id}`)
-      .send({ pollIntervalSec: 600, columnMapping: null })
+      .send({ pollIntervalSec: 600, columnMapping: null, description: ' อีเมลทุกแผนก ' })
       .expect(200);
-    expect(updated.body).toMatchObject({ pollIntervalSec: 600, columnMapping: null });
+    expect(updated.body).toMatchObject({
+      pollIntervalSec: 600,
+      columnMapping: null,
+      description: 'อีเมลทุกแผนก',
+    });
+    const cleared = await api
+      .patch(`/sync-configs/${config.id}`)
+      .send({ description: '' })
+      .expect(200);
+    expect(cleared.body.description).toBeNull();
     await api.delete(`/sync-configs/${config.id}`).expect(204);
     await api.get(`/sync-configs/${config.id}`).expect(404);
   });

@@ -23,6 +23,7 @@ const config: SyncConfigWithConnection = {
   id: 's1',
   connectionId: 'c1',
   name: 'PR/PO',
+  description: null,
   kind: 'OUTBOX',
   querySql: 'SELECT ...',
   columnMapping: null,

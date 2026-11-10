@@ -52,6 +52,7 @@ export const syncConfigSchema = z.object({
   connectionId: z.string().uuid(),
   connectionName: z.string(),
   name: z.string(),
+  description: z.string().nullable(),
   kind: syncKindSchema,
   querySql: z.string(),
   columnMapping: columnMappingSchema.nullable(),
@@ -70,6 +71,14 @@ export const syncConfigSchema = z.object({
 export type SyncConfigDto = z.infer<typeof syncConfigSchema>;
 
 const nameField = z.string().trim().min(1).max(100);
+export const MAX_DESCRIPTION_LENGTH = 500;
+/** Blank text is stored as null. */
+const descriptionField = z
+  .string()
+  .trim()
+  .max(MAX_DESCRIPTION_LENGTH)
+  .nullable()
+  .transform((v) => v || null);
 const queryField = z.string().trim().min(1).max(MAX_QUERY_LENGTH);
 const pollField = z.number().int().min(MIN_POLL_INTERVAL_SEC).max(MAX_POLL_INTERVAL_SEC);
 
@@ -77,6 +86,7 @@ export const createSyncConfigSchema = z
   .object({
     connectionId: z.string().uuid(),
     name: nameField,
+    description: descriptionField.default(null),
     kind: syncKindSchema,
     querySql: queryField,
     columnMapping: columnMappingSchema.nullable().default(null),
@@ -97,6 +107,7 @@ export type CreateSyncConfigInput = z.infer<typeof createSyncConfigSchema>;
 export const updateSyncConfigSchema = z
   .object({
     name: nameField,
+    description: descriptionField,
     querySql: queryField,
     columnMapping: columnMappingSchema.nullable(),
     pollIntervalSec: pollField,

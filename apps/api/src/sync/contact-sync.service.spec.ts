@@ -11,6 +11,7 @@ const config: SyncConfigWithConnection = {
   id: 's1',
   connectionId: 'c1',
   name: 'Contacts',
+  description: null,
   kind: 'CONTACTS',
   querySql: 'SELECT * FROM Z_MaIL',
   columnMapping: { email: 'Email' },

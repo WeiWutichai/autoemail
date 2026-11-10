@@ -42,6 +42,7 @@ export function toSyncConfigDto(config: SyncConfigWithConnection): SyncConfigDto
     connectionId: config.connectionId,
     connectionName: config.connection.name,
     name: config.name,
+    description: config.description,
     kind: config.kind,
     querySql: config.querySql ?? '',
     columnMapping: parseColumnMapping(config.columnMapping),

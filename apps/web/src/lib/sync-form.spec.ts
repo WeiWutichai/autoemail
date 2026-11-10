@@ -14,6 +14,7 @@ const config: SyncConfigDto = {
   connectionId,
   connectionName: 'ERP',
   name: 'Contacts',
+  description: null,
   kind: 'CONTACTS',
   querySql: 'SELECT 1',
   columnMapping: { email: 'Z_Email' },

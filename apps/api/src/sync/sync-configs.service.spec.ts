@@ -23,6 +23,7 @@ function setup() {
 const input = {
   connectionId: conn.id,
   name: 'Contacts',
+  description: null,
   kind: 'CONTACTS' as const,
   querySql: 'SELECT 1',
   columnMapping: null,
