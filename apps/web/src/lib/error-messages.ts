@@ -28,6 +28,10 @@ const MESSAGES: Record<string, string> = {
   TEMPLATE_REQUIRED: 'การดึงเมลที่ต้องส่งต้องเลือก template',
   SUPPRESSION_EXISTS: 'อีเมลนี้อยู่ในรายชื่อห้ามส่งของ database นี้แล้ว',
   SUPPRESSION_NOT_FOUND: 'ไม่พบอีเมลนี้ในรายชื่อห้ามส่ง (อาจถูกเอาออกไปแล้ว)',
+  CONTACT_NOT_FOUND: 'ไม่พบรายชื่อนี้',
+  CONTACT_EXISTS: 'อีเมลนี้ถูกเพิ่มไว้แล้ว',
+  CONTACT_FROM_ERP: 'รายชื่อที่มาจาก ERP แก้ไขหรือลบที่นี่ไม่ได้ ให้แก้ที่ ERP',
+  SYNC_NOT_OUTBOX: 'ดึงรายชื่อผู้รับได้เฉพาะ Sync ส่งเมล',
   MAIL_NOT_FOUND: 'ไม่พบเมลนี้',
   MAIL_STATE_CONFLICT: 'สถานะเมลเปลี่ยนไปแล้ว ทำรายการนี้ไม่ได้ กรุณารีเฟรช',
 };

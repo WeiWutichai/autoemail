@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  Ban,
   Database,
   FileText,
   History,
@@ -22,7 +21,6 @@ const NAV = [
   { href: '/connections', label: 'Connections', icon: Database },
   { href: '/sync', label: 'Sync', icon: RefreshCw },
   { href: '/contacts', label: 'Contacts', icon: Users },
-  { href: '/suppressions', label: 'รายชื่อห้ามส่ง', icon: Ban },
   { href: '/templates', label: 'Templates', icon: FileText },
   { href: '/smtp', label: 'SMTP', icon: Mail },
   { href: '/logs', label: 'Logs', icon: ScrollText },

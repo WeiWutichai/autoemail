@@ -1,4 +1,5 @@
 import type {
+  CollectContactsResult,
   CreateSyncConfigInput,
   QueryPreviewInput,
   QueryPreviewResult,
@@ -60,5 +61,17 @@ export function useRunSync() {
       void qc.invalidateQueries({ queryKey: KEY });
       void qc.invalidateQueries({ queryKey: ['contacts'] });
     },
+  });
+}
+
+/** Stores an outbox sync's recipients as contacts; nothing is sent. */
+export function useCollectContacts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.request<CollectContactsResult>(`/sync-configs/${id}/collect-contacts`, {
+        method: 'POST',
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['contacts'] }),
   });
 }

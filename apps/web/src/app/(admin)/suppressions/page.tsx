@@ -1,6 +1,7 @@
 'use client';
 
 import { createSuppressionSchema, MAX_SUPPRESSION_REASON_LENGTH } from '@erp-mail/shared';
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -68,6 +69,9 @@ export default function SuppressionsPage() {
   return (
     <div className="space-y-6">
       <div>
+        <Link href="/contacts" className="text-sm text-muted-foreground hover:underline">
+          ← กลับไปหน้า Contacts
+        </Link>
         <h1 className="text-2xl font-semibold">รายชื่อห้ามส่ง</h1>
         <p className="text-sm text-muted-foreground">
           อีเมลในรายการนี้จะไม่ได้รับเมลจาก database ที่เลือก (หรือทุก database) —
