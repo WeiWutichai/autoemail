@@ -4,9 +4,10 @@ import type { MailQueue, SmtpConfig } from '@prisma/client';
 import type { WorkerEnv } from '../config/env';
 import { MailerService, SmtpSendError } from '../mail/mailer.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { findSuppressed } from '../suppressions/suppressed';
 import { backoffMs, startOfDayInZone, startOfNextDayInZone } from './time';
 
-export type DeliveryOutcome = 'sent' | 'failed' | 'dead' | 'deferred' | 'skipped';
+export type DeliveryOutcome = 'sent' | 'failed' | 'dead' | 'deferred' | 'skipped' | 'cancelled';
 
 const NO_SMTP_RETRY_MS = 5 * 60_000;
 
@@ -59,6 +60,30 @@ export class DeliveryService {
     });
     if (!mail) return 'skipped';
 
+    // Addresses may have been suppressed after the mail was queued.
+    const suppressed = await findSuppressed(this.prisma, [
+      ...mail.toAddrs,
+      ...mail.cc,
+      ...mail.bcc,
+    ]);
+    const keep = (list: string[]) => list.filter((a) => !suppressed.has(a.toLowerCase()));
+    const recipients = { to: keep(mail.toAddrs), cc: keep(mail.cc), bcc: keep(mail.bcc) };
+    if (recipients.to.length === 0) {
+      const { count } = await this.prisma.mailQueue.updateMany({
+        where: { id, ...dueWhere(now) },
+        data: { status: 'CANCELLED', nextRetryAt: null },
+      });
+      if (count === 0) return 'skipped';
+      await this.prisma.mailLog.create({
+        data: {
+          queueId: id,
+          event: 'CANCELLED',
+          detail: 'Every recipient is on the suppression list',
+        },
+      });
+      return 'cancelled';
+    }
+
     const smtp = mail.smtpConfig ?? (await this.defaultSmtp());
     if (!smtp) {
       await this.defer(mail, new Date(now.getTime() + NO_SMTP_RETRY_MS), 'No SMTP config');
@@ -88,9 +113,7 @@ export class DeliveryService {
 
     try {
       const sent = await this.mailer.send(smtp, {
-        to: mail.toAddrs,
-        cc: mail.cc,
-        bcc: mail.bcc,
+        ...recipients,
         subject: mail.renderedSubject,
         html: mail.renderedHtml,
         text: mail.renderedText ?? '',

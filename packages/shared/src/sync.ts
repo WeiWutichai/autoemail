@@ -135,12 +135,23 @@ export const outboxPreviewSchema = z.object({
   newMails: z.number().int().nonnegative(),
   /** `erp_ref_id`s already in the queue for this connection; they will not be sent again. */
   alreadyQueued: z.number().int().nonnegative(),
+  /** New mails not enqueued because every `to` address is on the suppression list. */
+  suppressedMails: z.number().int().nonnegative(),
   /** Rows dropped for a duplicate `erp_ref_id` within the result. */
   duplicateRows: z.number().int().nonnegative(),
   /** Rows dropped for a missing id or a missing / invalid address. */
   invalidRows: z.number().int().nonnegative(),
-  /** Every address (to, cc or bcc) of the new mails with its mail count, most first. */
-  recipients: z.array(z.object({ email: z.string(), mails: z.number().int().positive() })),
+  /**
+   * Every address (to, cc or bcc) of the not-yet-queued mails with its mail count, most first.
+   * `suppressed` addresses are on the suppression list and will not receive them.
+   */
+  recipients: z.array(
+    z.object({
+      email: z.string(),
+      mails: z.number().int().positive(),
+      suppressed: z.boolean(),
+    }),
+  ),
 });
 export type OutboxPreview = z.infer<typeof outboxPreviewSchema>;
 

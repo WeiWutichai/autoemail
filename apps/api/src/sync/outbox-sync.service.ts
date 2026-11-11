@@ -6,6 +6,7 @@ import { applyColumnMapping, type ErpRow } from '../erp/erp-rows';
 import { ErpDataSourceFactory } from '../erp/erp-datasource.factory';
 import { TemplateRenderer } from '../mail/template-renderer';
 import { PrismaService } from '../prisma/prisma.service';
+import { findSuppressed } from '../suppressions/suppressed';
 import { parseColumnMapping, type SyncConfigWithConnection } from './sync-config.mapper';
 import { cellText, chunk, RunCounter } from './run-result';
 
@@ -69,6 +70,22 @@ export function parseOutboxRows(
   return [...byRef.values()];
 }
 
+/** Every address of the rows (to, cc and bcc). */
+export function outboxAddresses(rows: OutboxRow[]): string[] {
+  return rows.flatMap((r) => [...r.to, ...r.cc, ...r.bcc]);
+}
+
+/**
+ * Drops suppressed addresses from a row; null when no `to` address is left, in which case
+ * the row is not enqueued (it is picked up again if the address is later un-suppressed).
+ */
+export function withoutSuppressed(row: OutboxRow, suppressed: Set<string>): OutboxRow | null {
+  if (suppressed.size === 0) return row;
+  const keep = (list: string[]) => list.filter((a) => !suppressed.has(a));
+  const to = keep(row.to);
+  return to.length === 0 ? null : { ...row, to, cc: keep(row.cc), bcc: keep(row.bcc) };
+}
+
 /**
  * Pulls rows that need a mail from the ERP and enqueues one `mail_queue` item per new
  * `(connection_id, erp_ref_id)`; rows already enqueued are skipped (sent once only).
@@ -87,6 +104,7 @@ export class OutboxSyncService {
     const rows = await this.datasources.query(config.connection, config.querySql ?? '');
     counter.fetched = rows.length;
     const parsed = this.parseRows(rows, parseColumnMapping(config.columnMapping), counter);
+    const suppressed = await findSuppressed(this.prisma, outboxAddresses(parsed));
 
     const templates = new TemplateCache(this.prisma);
     for (const batch of chunk(parsed, BATCH)) {
@@ -98,8 +116,9 @@ export class OutboxSyncService {
         select: { erpRefId: true },
       });
       const known = new Set(existing.map((m) => m.erpRefId));
-      for (const row of batch) {
-        if (known.has(row.erpRefId)) {
+      for (const parsedRow of batch) {
+        const row = known.has(parsedRow.erpRefId) ? null : withoutSuppressed(parsedRow, suppressed);
+        if (!row) {
           counter.skipped++;
           continue;
         }

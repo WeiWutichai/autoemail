@@ -49,8 +49,15 @@ const row = (ref: string, extra: Record<string, string | null> = {}) => ({
   ...extra,
 });
 
-function setup(rows: Record<string, string | null>[], existing: string[] = []) {
+function setup(
+  rows: Record<string, string | null>[],
+  existing: string[] = [],
+  suppressed: string[] = [],
+) {
   const prisma = {
+    suppressedEmail: {
+      findMany: vi.fn().mockResolvedValue(suppressed.map((email) => ({ email }))),
+    },
     mailQueue: {
       findMany: vi.fn().mockResolvedValue(existing.map((erpRefId) => ({ erpRefId }))),
       create: vi.fn().mockResolvedValue({}),
@@ -124,6 +131,24 @@ describe('OutboxSyncService', () => {
       'erp_ref_id PR-5: template off is deactivated',
     ]);
     expect(prisma.mailQueue.create).not.toHaveBeenCalled();
+  });
+
+  it('drops suppressed addresses and skips rows left without a to address', async () => {
+    const { prisma, service } = setup(
+      [
+        row('PR-1', { cc: 'boss@example.com; keep@example.com' }),
+        row('PR-2', { to_email: 'gone@example.com' }),
+      ],
+      [],
+      ['boss@example.com', 'gone@example.com'],
+    );
+    await expect(service.sync(config)).resolves.toMatchObject({ created: 1, skipped: 1 });
+    expect(prisma.mailQueue.create).toHaveBeenCalledTimes(1);
+    expect(prisma.mailQueue.create.mock.calls[0][0].data).toMatchObject({
+      erpRefId: 'PR-1',
+      toAddrs: ['buyer@example.com'],
+      cc: ['keep@example.com'],
+    });
   });
 
   it('treats a concurrent insert as skipped', async () => {

@@ -13,6 +13,7 @@ function setup() {
     mailTemplate: { findUnique: vi.fn().mockResolvedValue({ id: 't1' }) },
     smtpConfig: { findUnique: vi.fn().mockResolvedValue(null) },
     mailQueue: { findMany: vi.fn().mockResolvedValue([]) },
+    suppressedEmail: { findMany: vi.fn().mockResolvedValue([]) },
   };
   const datasources = { query: vi.fn() };
   const service = new SyncConfigsService(
@@ -98,6 +99,7 @@ describe('SyncConfigsService', () => {
       { erp_ref_id: 'PR:4:z', to_email: 'not-an-email' },
     ]);
     prisma.mailQueue.findMany.mockResolvedValue([{ erpRefId: 'PR:3:a' }]);
+    prisma.suppressedEmail.findMany.mockResolvedValue([{ email: 'b@x.com' }]);
 
     const res = await service.preview({ ...input, kind: 'OUTBOX' });
     expect(prisma.mailQueue.findMany).toHaveBeenCalledWith({
@@ -105,14 +107,15 @@ describe('SyncConfigsService', () => {
       select: { erpRefId: true },
     });
     expect(res.outbox).toEqual({
-      newMails: 3,
+      newMails: 2,
       alreadyQueued: 1,
+      suppressedMails: 1,
       duplicateRows: 1,
       invalidRows: 1,
       recipients: [
-        { email: 'a@x.com', mails: 2 },
-        { email: 'b@x.com', mails: 1 },
-        { email: 'boss@x.com', mails: 1 },
+        { email: 'a@x.com', mails: 2, suppressed: false },
+        { email: 'b@x.com', mails: 1, suppressed: true },
+        { email: 'boss@x.com', mails: 1, suppressed: false },
       ],
     });
   });

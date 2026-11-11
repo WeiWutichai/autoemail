@@ -30,6 +30,7 @@ function setup(overrides: Partial<typeof mail> = {}) {
       count: vi.fn().mockResolvedValue(0),
     },
     mailLog: { create: vi.fn() },
+    suppressedEmail: { findMany: vi.fn().mockResolvedValue([]) },
     smtpConfig: { findFirst: vi.fn().mockResolvedValue(smtp) },
   };
   const mailer = { send: vi.fn().mockResolvedValue({ messageId: '<m@x>', response: '250 OK' }) };
@@ -76,6 +77,25 @@ describe('DeliveryService.process', () => {
     await expect(service.process('q1', now)).resolves.toBe('skipped');
     prisma.mailQueue.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(service.process('q1', now)).resolves.toBe('skipped');
+    expect(mailer.send).not.toHaveBeenCalled();
+  });
+
+  it('leaves out addresses suppressed after the mail was queued', async () => {
+    const { prisma, mailer, service } = setup({ cc: ['boss@example.com'] });
+    prisma.suppressedEmail.findMany.mockResolvedValue([{ email: 'boss@example.com' }]);
+    await expect(service.process('q1', now)).resolves.toBe('sent');
+    expect(mailer.send.mock.calls[0][1]).toMatchObject({ to: ['buyer@example.com'], cc: [] });
+  });
+
+  it('cancels a mail whose every to address is suppressed', async () => {
+    const { prisma, mailer, service } = setup();
+    prisma.suppressedEmail.findMany.mockResolvedValue([{ email: 'buyer@example.com' }]);
+    await expect(service.process('q1', now)).resolves.toBe('cancelled');
+    expect(prisma.mailQueue.updateMany.mock.calls[0][0].data).toEqual({
+      status: 'CANCELLED',
+      nextRetryAt: null,
+    });
+    expect(prisma.mailLog.create.mock.calls[0][0].data).toMatchObject({ event: 'CANCELLED' });
     expect(mailer.send).not.toHaveBeenCalled();
   });
 

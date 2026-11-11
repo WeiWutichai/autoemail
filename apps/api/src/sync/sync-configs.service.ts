@@ -20,7 +20,8 @@ import { assertSelectSql } from '../common/sql/sql-validator';
 import { applyColumnMapping, type ErpRow } from '../erp/erp-rows';
 import { ErpDataSourceFactory, ErpQueryError } from '../erp/erp-datasource.factory';
 import { PrismaService } from '../prisma/prisma.service';
-import { parseOutboxRows } from './outbox-sync.service';
+import { findSuppressed } from '../suppressions/suppressed';
+import { outboxAddresses, parseOutboxRows, withoutSuppressed } from './outbox-sync.service';
 import { chunk, RunCounter } from './run-result';
 import {
   SYNC_CONFIG_INCLUDE,
@@ -129,23 +130,28 @@ export class SyncConfigsService {
       });
       existing.forEach((m) => m.erpRefId && known.add(m.erpRefId));
     }
+    const fresh = parsed.filter((row) => !known.has(row.erpRefId));
+    const suppressed = await findSuppressed(this.prisma, outboxAddresses(fresh));
     const counts = new Map<string, number>();
+    const add = (email: string) => counts.set(email, (counts.get(email) ?? 0) + 1);
     let newMails = 0;
-    for (const row of parsed) {
-      if (known.has(row.erpRefId)) continue;
-      newMails++;
-      for (const email of new Set([...row.to, ...row.cc, ...row.bcc])) {
-        counts.set(email, (counts.get(email) ?? 0) + 1);
-      }
+    for (const row of fresh) {
+      const sendable = withoutSuppressed(row, suppressed);
+      if (sendable) newMails++;
+      // Suppressed addresses are listed too (flagged) so the admin can see who is left out.
+      new Set(outboxAddresses([row])).forEach(add);
     }
     return {
       newMails,
-      alreadyQueued: parsed.length - newMails,
+      alreadyQueued: parsed.length - fresh.length,
+      suppressedMails: fresh.length - newMails,
       duplicateRows: counter.skipped,
       invalidRows: counter.errors,
-      recipients: Array.from(counts, ([email, mails]) => ({ email, mails })).sort(
-        (a, b) => b.mails - a.mails || a.email.localeCompare(b.email),
-      ),
+      recipients: Array.from(counts, ([email, mails]) => ({
+        email,
+        mails,
+        suppressed: suppressed.has(email),
+      })).sort((a, b) => b.mails - a.mails || a.email.localeCompare(b.email)),
     };
   }
 
