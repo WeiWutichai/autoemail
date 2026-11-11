@@ -19,6 +19,12 @@ enum SyncKind {
   OUTBOX
 }
 
+/// ERP = pulled by a sync (contacts sync or outbox recipients); MANUAL = added by an admin.
+enum ContactSource {
+  ERP
+  MANUAL
+}
+
 enum MailStatus {
   PENDING
   SENDING
@@ -128,10 +134,13 @@ model ErpSyncConfig {
   @@map("erp_sync_configs")
 }
 
+/// ERP contacts always have connectionId + erpRefId. MANUAL contacts have no erpRefId and
+/// connectionId is optional (null = not tied to a database).
 model Contact {
-  id           String   @id @default(uuid()) @db.Uuid
-  connectionId String   @map("connection_id") @db.Uuid
-  erpRefId     String   @map("erp_ref_id")
+  id           String        @id @default(uuid()) @db.Uuid
+  source       ContactSource @default(ERP)
+  connectionId String?       @map("connection_id") @db.Uuid
+  erpRefId     String?       @map("erp_ref_id")
   name         String?
   email        String?
   phone        String?
@@ -141,7 +150,7 @@ model Contact {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  connection ErpConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  connection ErpConnection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   @@unique([connectionId, erpRefId])
   @@index([email])

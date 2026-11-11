@@ -58,6 +58,12 @@ function setup(
     suppressedEmail: {
       findMany: vi.fn().mockResolvedValue(suppressed.map((email) => ({ email }))),
     },
+    contact: {
+      findMany: vi.fn().mockResolvedValue([]),
+      createMany: vi.fn(({ data }: { data: unknown[] }) => Promise.resolve({ count: data.length })),
+      updateMany: vi.fn(),
+    },
+    $transaction: vi.fn(),
     mailQueue: {
       findMany: vi.fn().mockResolvedValue(existing.map((erpRefId) => ({ erpRefId }))),
       create: vi.fn().mockResolvedValue({}),
@@ -131,6 +137,24 @@ describe('OutboxSyncService', () => {
       'erp_ref_id PR-5: template off is deactivated',
     ]);
     expect(prisma.mailQueue.create).not.toHaveBeenCalled();
+  });
+
+  it('stores every recipient as an ERP contact with its departments', async () => {
+    const { prisma, service } = setup([
+      row('PR-1', { department: 'MTN', cc: 'boss@example.com' }),
+      row('PR-2', { department: 'DIE' }),
+    ]);
+    await service.sync(config);
+    expect(prisma.contact.createMany.mock.calls[0][0].data).toEqual([
+      expect.objectContaining({
+        source: 'ERP',
+        connectionId: 'c1',
+        erpRefId: 'recipient:buyer@example.com',
+        email: 'buyer@example.com',
+        company: 'DIE, MTN',
+      }),
+      expect.objectContaining({ email: 'boss@example.com', company: 'MTN' }),
+    ]);
   });
 
   it('drops suppressed addresses and skips rows left without a to address', async () => {

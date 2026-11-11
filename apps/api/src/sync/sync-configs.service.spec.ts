@@ -120,6 +120,20 @@ describe('SyncConfigsService', () => {
     });
   });
 
+  it('only collects contacts for outbox syncs', async () => {
+    const { prisma, datasources, service } = setup();
+    prisma.erpSyncConfig.findUnique.mockResolvedValue({
+      id: 's1',
+      kind: 'CONTACTS',
+      connectionId: conn.id,
+    });
+    await expect(service.collectContacts('s1')).rejects.toMatchObject({
+      status: 400,
+      response: { code: 'SYNC_NOT_OUTBOX' },
+    });
+    expect(datasources.query).not.toHaveBeenCalled();
+  });
+
   it('maps ERP query failures to 422 ERP_QUERY_FAILED', async () => {
     const { datasources, service } = setup();
     datasources.query.mockRejectedValue(new ErpQueryError('Invalid column name x'));

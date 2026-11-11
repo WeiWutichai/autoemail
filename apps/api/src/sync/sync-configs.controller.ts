@@ -11,6 +11,7 @@ import {
   Post,
 } from '@nestjs/common';
 import {
+  type CollectContactsResult,
   createSyncConfigSchema,
   queryPreviewInputSchema,
   updateSyncConfigSchema,
@@ -57,6 +58,13 @@ export class SyncConfigsController {
     @Body(new ZodValidationPipe(queryPreviewInputSchema)) body: QueryPreviewInput,
   ): Promise<QueryPreviewResult> {
     return this.configs.preview(body);
+  }
+
+  @Post(':id/collect-contacts')
+  @Audit('sync_config.collect_contacts')
+  @HttpCode(HttpStatus.OK)
+  collectContacts(@Param('id', ParseUUIDPipe) id: string): Promise<CollectContactsResult> {
+    return this.configs.collectContacts(id);
   }
 
   @Patch(':id')

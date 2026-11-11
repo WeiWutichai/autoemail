@@ -7,6 +7,7 @@ import { ErpDataSourceFactory } from '../erp/erp-datasource.factory';
 import { TemplateRenderer } from '../mail/template-renderer';
 import { PrismaService } from '../prisma/prisma.service';
 import { findSuppressed } from '../suppressions/suppressed';
+import { collectOutboxContacts } from './outbox-contacts';
 import { parseColumnMapping, type SyncConfigWithConnection } from './sync-config.mapper';
 import { cellText, chunk, RunCounter } from './run-result';
 
@@ -104,6 +105,8 @@ export class OutboxSyncService {
     const rows = await this.datasources.query(config.connection, config.querySql ?? '');
     counter.fetched = rows.length;
     const parsed = this.parseRows(rows, parseColumnMapping(config.columnMapping), counter);
+    // Keep the Contacts page in step with who this sync mails (suppressed ones included).
+    await collectOutboxContacts(this.prisma, config.connectionId, parsed);
     const suppressed = await findSuppressed(
       this.prisma,
       config.connectionId,

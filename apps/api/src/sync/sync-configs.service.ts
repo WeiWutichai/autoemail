@@ -7,6 +7,7 @@ import {
 import {
   PREVIEW_ROW_LIMIT,
   REQUIRED_COLUMNS,
+  type CollectContactsResult,
   type CreateSyncConfigInput,
   type OutboxPreview,
   type QueryPreviewInput,
@@ -14,16 +15,18 @@ import {
   type SyncConfigDto,
   type UpdateSyncConfigInput,
 } from '@erp-mail/shared';
-import { Prisma } from '@prisma/client';
+import { Prisma, type ErpConnection } from '@prisma/client';
 import { UnprocessableEntityException } from '@nestjs/common';
 import { assertSelectSql } from '../common/sql/sql-validator';
 import { applyColumnMapping, type ErpRow } from '../erp/erp-rows';
 import { ErpDataSourceFactory, ErpQueryError } from '../erp/erp-datasource.factory';
 import { PrismaService } from '../prisma/prisma.service';
 import { findSuppressed } from '../suppressions/suppressed';
+import { collectOutboxContacts } from './outbox-contacts';
 import { outboxAddresses, parseOutboxRows, withoutSuppressed } from './outbox-sync.service';
 import { chunk, RunCounter } from './run-result';
 import {
+  parseColumnMapping,
   SYNC_CONFIG_INCLUDE,
   toSyncConfigDto,
   type SyncConfigWithConnection,
@@ -91,15 +94,7 @@ export class SyncConfigsService {
   async preview(input: QueryPreviewInput): Promise<QueryPreviewResult> {
     const conn = await this.connectionOrThrow(input.connectionId);
     const started = Date.now();
-    let rows;
-    try {
-      rows = await this.datasources.query(conn, input.querySql);
-    } catch (err) {
-      if (err instanceof ErpQueryError) {
-        throw new UnprocessableEntityException({ code: 'ERP_QUERY_FAILED', message: err.message });
-      }
-      throw err;
-    }
+    const rows = await this.queryOrThrow(conn, input.querySql);
     const mapped = rows.map((row) => applyColumnMapping(row, input.columnMapping));
     const columns = [...new Set(mapped.flatMap((row) => Object.keys(row)))];
     const missingColumns =
@@ -155,6 +150,28 @@ export class SyncConfigsService {
     };
   }
 
+  /** Runs an outbox query and stores its recipients as contacts; nothing is enqueued. */
+  async collectContacts(id: string): Promise<CollectContactsResult> {
+    const config = await this.findOrThrow(id);
+    if (config.kind !== 'OUTBOX') {
+      throw new BadRequestException({
+        code: 'SYNC_NOT_OUTBOX',
+        message: 'Only outbox syncs have recipients to collect',
+      });
+    }
+    const conn = await this.connectionOrThrow(config.connectionId);
+    const rows = await this.queryOrThrow(conn, config.querySql ?? '');
+    const parsed = parseOutboxRows(
+      rows,
+      parseColumnMapping(config.columnMapping),
+      new RunCounter(),
+    );
+    return {
+      fetched: rows.length,
+      ...(await collectOutboxContacts(this.prisma, config.connectionId, parsed)),
+    };
+  }
+
   /** Outbox configs need an existing template; an explicit SMTP config must exist. */
   private async assertReferences(
     kind: SyncConfigDto['kind'],
@@ -193,6 +210,18 @@ export class SyncConfigsService {
       });
     }
     return config;
+  }
+
+  /** Runs the ERP query, mapping driver errors to 422 ERP_QUERY_FAILED. */
+  private async queryOrThrow(conn: ErpConnection, sql: string): Promise<ErpRow[]> {
+    try {
+      return await this.datasources.query(conn, sql);
+    } catch (err) {
+      if (err instanceof ErpQueryError) {
+        throw new UnprocessableEntityException({ code: 'ERP_QUERY_FAILED', message: err.message });
+      }
+      throw err;
+    }
   }
 
   private async connectionOrThrow(id: string) {
