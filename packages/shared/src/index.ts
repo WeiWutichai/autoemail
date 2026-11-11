@@ -8,3 +8,4 @@ export * from './smtp';
 export * from './templates';
 export * from './mails';
 export * from './audit';
+export * from './suppressions';

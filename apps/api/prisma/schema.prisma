@@ -274,3 +274,15 @@ model AdminAuditLog {
   @@index([adminId, createdAt])
   @@map("admin_audit_logs")
 }
+
+/// Addresses that must never receive a mail. Applied when the outbox sync enqueues
+/// and again by the worker just before sending. `email` is stored lower-cased.
+model SuppressedEmail {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("suppressed_emails")
+}

@@ -13,6 +13,7 @@ import { MailsModule } from './mails/mails.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PrivacyModule } from './privacy/privacy.module';
 import { SmtpModule } from './smtp/smtp.module';
+import { SuppressionsModule } from './suppressions/suppressions.module';
 import { SyncConfigsModule } from './sync/sync-configs.module';
 import { TemplatesModule } from './templates/templates.module';
 
@@ -42,6 +43,7 @@ import { TemplatesModule } from './templates/templates.module';
     TemplatesModule,
     MailsModule,
     PrivacyModule,
+    SuppressionsModule,
     AuditModule,
   ],
 })
