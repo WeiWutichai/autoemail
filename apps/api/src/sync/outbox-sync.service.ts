@@ -104,7 +104,11 @@ export class OutboxSyncService {
     const rows = await this.datasources.query(config.connection, config.querySql ?? '');
     counter.fetched = rows.length;
     const parsed = this.parseRows(rows, parseColumnMapping(config.columnMapping), counter);
-    const suppressed = await findSuppressed(this.prisma, outboxAddresses(parsed));
+    const suppressed = await findSuppressed(
+      this.prisma,
+      config.connectionId,
+      outboxAddresses(parsed),
+    );
 
     const templates = new TemplateCache(this.prisma);
     for (const batch of chunk(parsed, BATCH)) {

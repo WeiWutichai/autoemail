@@ -92,6 +92,7 @@ model ErpConnection {
   syncConfigs ErpSyncConfig[]
   contacts    Contact[]
   mailQueue   MailQueue[]
+  suppressions SuppressedEmail[]
 
   @@map("erp_connections")
 }
@@ -277,12 +278,18 @@ model AdminAuditLog {
 
 /// Addresses that must never receive a mail. Applied when the outbox sync enqueues
 /// and again by the worker just before sending. `email` is stored lower-cased.
+/// `connectionId` null = every database; otherwise only mails from that connection.
+/// (email, null) uniqueness is enforced by the service since NULLs are distinct.
 model SuppressedEmail {
-  id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
-  reason    String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String
+  connectionId String?  @map("connection_id") @db.Uuid
+  reason       String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
+  connection ErpConnection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([email, connectionId])
   @@map("suppressed_emails")
 }

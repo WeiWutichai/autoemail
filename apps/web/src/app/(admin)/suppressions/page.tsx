@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/native-select';
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useConnections } from '@/lib/connections';
 import { errorMessage } from '@/lib/error-messages';
 import { formatDateTime } from '@/lib/format';
 import { useCreateSuppression, useDeleteSuppression, useSuppressions } from '@/lib/suppressions';
@@ -24,16 +26,23 @@ export default function SuppressionsPage() {
   const remove = useDeleteSuppression();
   const [email, setEmail] = useState('');
   const [reason, setReason] = useState('');
+  const [connectionId, setConnectionId] = useState('');
+  const { data: connections } = useConnections();
   const [formError, setFormError] = useState<string | null>(null);
   const [q, setQ] = useState('');
 
   const onAdd = async (e: FormEvent) => {
     e.preventDefault();
-    const parsed = createSuppressionSchema.safeParse({ email, reason });
+    const parsed = createSuppressionSchema.safeParse({
+      email,
+      reason,
+      connectionId: connectionId || null,
+    });
     if (!parsed.success) return setFormError('กรุณากรอกอีเมลให้ถูกต้อง');
     try {
       await create.mutateAsync(parsed.data);
       toast.success(`เพิ่ม ${parsed.data.email} ในรายชื่อห้ามส่งแล้ว`);
+      setConnectionId('');
       setEmail('');
       setReason('');
       setFormError(null);
@@ -61,15 +70,16 @@ export default function SuppressionsPage() {
       <div>
         <h1 className="text-2xl font-semibold">รายชื่อห้ามส่ง</h1>
         <p className="text-sm text-muted-foreground">
-          อีเมลในรายการนี้จะไม่ได้รับเมลจากทุก Sync — ถ้าเป็นผู้รับคนเดียวของเมลฉบับนั้น
-          เมลจะไม่ถูกส่ง ถ้าเป็นหนึ่งในหลายผู้รับ ระบบจะตัดเฉพาะอีเมลนี้ออก
+          อีเมลในรายการนี้จะไม่ได้รับเมลจาก database ที่เลือก (หรือทุก database) —
+          ถ้าเป็นผู้รับคนเดียวของเมลฉบับนั้น เมลจะไม่ถูกส่ง ถ้าเป็นหนึ่งในหลายผู้รับ
+          ระบบจะตัดเฉพาะอีเมลนี้ออก
         </p>
       </div>
 
       <form
         onSubmit={onAdd}
         noValidate
-        className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_1fr_auto] md:items-end"
+        className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_12rem_1fr_auto] md:items-end"
       >
         <div className="space-y-2">
           <Label htmlFor="sup-email">อีเมล</Label>
@@ -80,6 +90,21 @@ export default function SuppressionsPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sup-conn">ห้ามส่งจาก</Label>
+          <NativeSelect
+            id="sup-conn"
+            value={connectionId}
+            onChange={(e) => setConnectionId(e.target.value)}
+          >
+            <option value="">ทุก database</option>
+            {connections?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </NativeSelect>
         </div>
         <div className="space-y-2">
           <Label htmlFor="sup-reason">เหตุผล (ไม่บังคับ)</Label>
@@ -94,7 +119,7 @@ export default function SuppressionsPage() {
         <Button type="submit" disabled={create.isPending}>
           เพิ่มในรายชื่อห้ามส่ง
         </Button>
-        {formError && <p className="text-sm text-destructive md:col-span-3">{formError}</p>}
+        {formError && <p className="text-sm text-destructive md:col-span-4">{formError}</p>}
       </form>
 
       <div className="flex items-center justify-between gap-3">
@@ -115,6 +140,7 @@ export default function SuppressionsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>อีเมล</TableHead>
+            <TableHead>ห้ามส่งจาก</TableHead>
             <TableHead>เหตุผล</TableHead>
             <TableHead>เพิ่มเมื่อ</TableHead>
             <TableHead className="text-right">การจัดการ</TableHead>
@@ -123,14 +149,14 @@ export default function SuppressionsPage() {
         <TableBody>
           {isLoading && (
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 กำลังโหลด…
               </TableCell>
             </TableRow>
           )}
           {list && shown.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 {list.length === 0 ? 'ยังไม่มีอีเมลในรายชื่อห้ามส่ง' : 'ไม่พบอีเมลที่ค้นหา'}
               </TableCell>
             </TableRow>
@@ -138,6 +164,7 @@ export default function SuppressionsPage() {
           {shown.map((s) => (
             <TableRow key={s.id}>
               <TableCell>{s.email}</TableCell>
+              <TableCell>{s.connectionName ?? 'ทุก database'}</TableCell>
               <TableCell className="text-muted-foreground">{s.reason ?? '—'}</TableCell>
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {formatDateTime(s.createdAt)}

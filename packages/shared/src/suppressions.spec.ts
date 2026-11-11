@@ -4,6 +4,7 @@ describe('createSuppressionSchema', () => {
   it('normalises the address and blank reasons', () => {
     expect(createSuppressionSchema.parse({ email: '  A@X.com ' })).toEqual({
       email: 'a@x.com',
+      connectionId: null,
       reason: null,
     });
     expect(createSuppressionSchema.parse({ email: 'a@x.com', reason: '  ' }).reason).toBeNull();

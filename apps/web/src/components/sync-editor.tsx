@@ -323,7 +323,7 @@ export function SyncEditor({ config }: { config: SyncConfigDto | null }) {
           </div>
 
           {preview.data ? (
-            <QueryPreview preview={preview.data} />
+            <QueryPreview preview={preview.data} connectionId={form.connectionId} />
           ) : (
             <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
               กด &quot;ตรวจ query&quot; เพื่อดูผลลัพธ์และรายชื่อผู้รับ — ยังไม่มีการส่งเมล

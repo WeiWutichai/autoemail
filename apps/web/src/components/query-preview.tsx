@@ -12,7 +12,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { errorMessage } from '@/lib/error-messages';
-import { useCreateSuppression, useDeleteSuppression, useSuppressions } from '@/lib/suppressions';
+import {
+  findSuppression,
+  useCreateSuppression,
+  useDeleteSuppression,
+  useSuppressions,
+} from '@/lib/suppressions';
 
 function cell(value: unknown): string {
   if (value === null || value === undefined) return '';
@@ -22,29 +27,39 @@ function cell(value: unknown): string {
 const n = (value: number) => value.toLocaleString('th-TH');
 
 /** Who the next outbox run would mail; nothing is sent by the preview. */
-function OutboxRecipients({ outbox }: { outbox: OutboxPreview }) {
+function OutboxRecipients({
+  outbox,
+  connectionId,
+}: {
+  outbox: OutboxPreview;
+  connectionId: string;
+}) {
   const { data: suppressions } = useSuppressions();
   const create = useCreateSuppression();
   const remove = useDeleteSuppression();
   const busy = create.isPending || remove.isPending;
   // The live list wins over the flags of the (possibly older) preview result.
-  const suppressedIds = new Map((suppressions ?? []).map((s) => [s.email, s.id]));
+  const entryFor = (email: string) => findSuppression(suppressions, email, connectionId);
   const isSuppressed = (email: string) =>
     suppressions
-      ? suppressedIds.has(email)
+      ? entryFor(email) !== undefined
       : outbox.recipients.some((r) => r.email === email && r.suppressed);
   const changed = outbox.recipients.some((r) => r.suppressed !== isSuppressed(r.email));
   const receiving = outbox.recipients.filter((r) => !isSuppressed(r.email)).length;
 
   const toggle = async (email: string) => {
-    const id = suppressedIds.get(email);
+    const entry = entryFor(email);
     try {
-      if (id) {
-        await remove.mutateAsync(id);
-        toast.success(`${email} จะได้รับเมลอีกครั้ง`);
+      if (entry) {
+        await remove.mutateAsync(entry.id);
+        toast.success(
+          entry.connectionId
+            ? `${email} จะได้รับเมลจาก database นี้อีกครั้ง`
+            : `${email} ถูกเอาออกจากรายชื่อห้ามส่งทุก database แล้ว`,
+        );
       } else {
-        await create.mutateAsync({ email, reason: null });
-        toast.success(`${email} อยู่ในรายชื่อห้ามส่งแล้ว`);
+        await create.mutateAsync({ email, connectionId, reason: null });
+        toast.success(`${email} จะไม่ได้รับเมลจาก database นี้`);
       }
     } catch (err) {
       toast.error(errorMessage(err));
@@ -98,7 +113,9 @@ function OutboxRecipients({ outbox }: { outbox: OutboxPreview }) {
                       <span className={off ? 'line-through' : undefined}>{r.email}</span>
                       {off && (
                         <Badge variant="secondary" className="ml-2">
-                          ห้ามส่ง
+                          {entryFor(r.email)?.connectionId === null
+                            ? 'ห้ามส่ง (ทุก database)'
+                            : 'ห้ามส่ง'}
                         </Badge>
                       )}
                     </TableCell>
@@ -133,7 +150,13 @@ function OutboxRecipients({ outbox }: { outbox: OutboxPreview }) {
 }
 
 /** Result of "ตรวจ query": missing required columns + the first rows. */
-export function QueryPreview({ preview }: { preview: QueryPreviewResult }) {
+export function QueryPreview({
+  preview,
+  connectionId,
+}: {
+  preview: QueryPreviewResult;
+  connectionId: string;
+}) {
   return (
     <div className="min-w-0 space-y-2 rounded-md border p-3">
       <p className="text-sm">
@@ -153,7 +176,7 @@ export function QueryPreview({ preview }: { preview: QueryPreviewResult }) {
       ) : (
         preview.rowCount > 0 && <p className="text-sm text-green-700">คอลัมน์ที่จำเป็นครบแล้ว</p>
       )}
-      {preview.outbox && <OutboxRecipients outbox={preview.outbox} />}
+      {preview.outbox && <OutboxRecipients outbox={preview.outbox} connectionId={connectionId} />}
       {preview.rows.length > 0 && (
         <div className="max-h-[70vh] overflow-auto">
           <Table>

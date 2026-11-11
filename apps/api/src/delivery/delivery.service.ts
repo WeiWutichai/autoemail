@@ -61,7 +61,7 @@ export class DeliveryService {
     if (!mail) return 'skipped';
 
     // Addresses may have been suppressed after the mail was queued.
-    const suppressed = await findSuppressed(this.prisma, [
+    const suppressed = await findSuppressed(this.prisma, mail.connectionId, [
       ...mail.toAddrs,
       ...mail.cc,
       ...mail.bcc,

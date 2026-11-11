@@ -5,6 +5,9 @@ export const MAX_SUPPRESSION_REASON_LENGTH = 200;
 export const suppressedEmailSchema = z.object({
   id: z.string().uuid(),
   email: z.string(),
+  /** null = suppressed for every database. */
+  connectionId: z.string().uuid().nullable(),
+  connectionName: z.string().nullable(),
   reason: z.string().nullable(),
   createdAt: z.string(),
 });
@@ -12,6 +15,8 @@ export type SuppressedEmailDto = z.infer<typeof suppressedEmailSchema>;
 
 export const createSuppressionSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(320),
+  /** null = every database. */
+  connectionId: z.string().uuid().nullable().default(null),
   reason: z
     .string()
     .trim()

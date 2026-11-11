@@ -4,6 +4,22 @@ import { api } from './api-client';
 
 const KEY = ['suppressions'] as const;
 
+/**
+ * The entry that stops `email` receiving mail from `connectionId`: one for that database
+ * first, else one for every database. A null connection only matches every-database entries.
+ */
+export function findSuppression(
+  list: SuppressedEmailDto[] | undefined,
+  email: string,
+  connectionId: string | null,
+): SuppressedEmailDto | undefined {
+  const matches = (list ?? []).filter((s) => s.email === email.toLowerCase());
+  return (
+    (connectionId ? matches.find((s) => s.connectionId === connectionId) : undefined) ??
+    matches.find((s) => s.connectionId === null)
+  );
+}
+
 export function useSuppressions() {
   return useQuery({
     queryKey: KEY,

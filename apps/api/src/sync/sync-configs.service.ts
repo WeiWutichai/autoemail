@@ -131,7 +131,7 @@ export class SyncConfigsService {
       existing.forEach((m) => m.erpRefId && known.add(m.erpRefId));
     }
     const fresh = parsed.filter((row) => !known.has(row.erpRefId));
-    const suppressed = await findSuppressed(this.prisma, outboxAddresses(fresh));
+    const suppressed = await findSuppressed(this.prisma, connectionId, outboxAddresses(fresh));
     const counts = new Map<string, number>();
     const add = (email: string) => counts.set(email, (counts.get(email) ?? 0) + 1);
     let newMails = 0;

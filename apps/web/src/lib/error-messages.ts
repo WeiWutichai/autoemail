@@ -26,7 +26,7 @@ const MESSAGES: Record<string, string> = {
   TEMPLATE_IN_USE: 'template นี้เคยใช้ส่งเมลแล้ว จึงลบไม่ได้ ให้ปิดการใช้งานแทน',
   TEMPLATE_INVALID: 'รูปแบบ template ไม่ถูกต้อง',
   TEMPLATE_REQUIRED: 'การดึงเมลที่ต้องส่งต้องเลือก template',
-  SUPPRESSION_EXISTS: 'อีเมลนี้อยู่ในรายชื่อห้ามส่งแล้ว',
+  SUPPRESSION_EXISTS: 'อีเมลนี้อยู่ในรายชื่อห้ามส่งของ database นี้แล้ว',
   SUPPRESSION_NOT_FOUND: 'ไม่พบอีเมลนี้ในรายชื่อห้ามส่ง (อาจถูกเอาออกไปแล้ว)',
   MAIL_NOT_FOUND: 'ไม่พบเมลนี้',
   MAIL_STATE_CONFLICT: 'สถานะเมลเปลี่ยนไปแล้ว ทำรายการนี้ไม่ได้ กรุณารีเฟรช',

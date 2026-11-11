@@ -46,6 +46,14 @@ describe('Suppressions (e2e)', () => {
     expect(dup.body.code).toBe('SUPPRESSION_EXISTS');
     await auth(request(server).post('/suppressions')).send({ email: 'bad' }).expect(400);
 
+    // A second every-database entry for the same address is a duplicate too.
+    await auth(request(server).post('/suppressions'))
+      .send({ email: 'boss@example.com', connectionId: null })
+      .expect(409);
+    await auth(request(server).post('/suppressions'))
+      .send({ email: 'boss@example.com', connectionId: '33333333-3333-4333-8333-333333333333' })
+      .expect(404);
+
     const list = await auth(request(server).get('/suppressions')).expect(200);
     expect(list.body.map((s: { email: string }) => s.email)).toEqual(['boss@example.com']);
 
