@@ -113,12 +113,15 @@ describe('Contacts: recipients, manual addresses and per-database suppression (e
       .send({ company: 'บริษัทคู่ค้า', connectionId: connId })
       .expect(200);
     expect(edited).toMatchObject({ company: 'บริษัทคู่ค้า', connectionName: 'ERP-PG' });
+    const { body: fetched } = await api.get(`/contacts/${created.id}`).expect(200);
+    expect(fetched).toMatchObject({ id: created.id, company: 'บริษัทคู่ค้า' });
 
     const { body: manual } = await api.get('/contacts?source=MANUAL').expect(200);
     expect(manual.total).toBe(1);
 
     await api.delete(`/contacts/${created.id}`).expect(204);
     await api.delete(`/contacts/${created.id}`).expect(404);
+    await api.get(`/contacts/${created.id}`).expect(404);
   });
 
   it('applies a suppression to its own database only, and every-database ones to all', async () => {

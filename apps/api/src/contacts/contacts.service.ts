@@ -59,6 +59,14 @@ export class ContactsService {
     return { items: rows.map(toContactDto), total, page: query.page, pageSize: query.pageSize };
   }
 
+  async get(id: string): Promise<ContactDto> {
+    const contact = await this.prisma.contact.findUnique({ where: { id }, include: INCLUDE });
+    if (!contact) {
+      throw new NotFoundException({ code: 'CONTACT_NOT_FOUND', message: 'Contact not found' });
+    }
+    return toContactDto(contact);
+  }
+
   /** Adds an address by hand (source MANUAL). */
   async create(input: CreateContactInput): Promise<ContactDto> {
     await this.assertConnection(input.connectionId);

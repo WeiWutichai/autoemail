@@ -36,6 +36,11 @@ export class ContactsController {
     return this.contacts.list(query);
   }
 
+  @Get(':id')
+  get(@Param('id', ParseUUIDPipe) id: string): Promise<ContactDto> {
+    return this.contacts.get(id);
+  }
+
   @Post()
   @Audit('contact.create')
   create(
