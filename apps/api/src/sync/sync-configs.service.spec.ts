@@ -1,3 +1,4 @@
+import { PREVIEW_ROW_LIMIT } from '@erp-mail/shared';
 import type { ErpConnection } from '@prisma/client';
 import { ErpQueryError, type ErpDataSourceFactory } from '../erp/erp-datasource.factory';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +12,7 @@ function setup() {
     erpSyncConfig: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     mailTemplate: { findUnique: vi.fn().mockResolvedValue({ id: 't1' }) },
     smtpConfig: { findUnique: vi.fn().mockResolvedValue(null) },
+    mailQueue: { findMany: vi.fn().mockResolvedValue([]) },
   };
   const datasources = { query: vi.fn() };
   const service = new SyncConfigsService(
@@ -71,14 +73,48 @@ describe('SyncConfigsService', () => {
 
   it('previews mapped columns, the first rows and missing required columns', async () => {
     const { datasources, service } = setup();
-    const rows = Array.from({ length: 25 }, (_, i) => ({ deptcode: `D${i}`, mail: `u${i}@x.com` }));
+    const rows = Array.from({ length: PREVIEW_ROW_LIMIT + 5 }, (_, i) => ({
+      deptcode: `D${i}`,
+      mail: `u${i}@x.com`,
+    }));
     datasources.query.mockResolvedValue(rows);
 
     const res = await service.preview({ ...input, columnMapping: { erp_ref_id: 'DeptCode' } });
-    expect(res.rowCount).toBe(25);
-    expect(res.rows).toHaveLength(20);
+    expect(res.rowCount).toBe(PREVIEW_ROW_LIMIT + 5);
+    expect(res.rows).toHaveLength(PREVIEW_ROW_LIMIT);
     expect(res.columns).toEqual(['deptcode', 'mail', 'erp_ref_id']);
     expect(res.missingColumns).toEqual(['email']);
+    expect(res.outbox).toBeNull();
+  });
+
+  it('summarises who an outbox query would mail, skipping ids already queued', async () => {
+    const { datasources, prisma, service } = setup();
+    datasources.query.mockResolvedValue([
+      { erp_ref_id: 'PR:1:a', to_email: 'A@x.com', cc: 'boss@x.com' },
+      { erp_ref_id: 'PR:1:b', to_email: 'b@x.com' },
+      { erp_ref_id: 'PR:2:a', to_email: 'a@x.com' },
+      { erp_ref_id: 'PR:2:a', to_email: 'a@x.com' },
+      { erp_ref_id: 'PR:3:a', to_email: 'a@x.com' },
+      { erp_ref_id: 'PR:4:z', to_email: 'not-an-email' },
+    ]);
+    prisma.mailQueue.findMany.mockResolvedValue([{ erpRefId: 'PR:3:a' }]);
+
+    const res = await service.preview({ ...input, kind: 'OUTBOX' });
+    expect(prisma.mailQueue.findMany).toHaveBeenCalledWith({
+      where: { connectionId: conn.id, erpRefId: { in: ['PR:1:a', 'PR:1:b', 'PR:2:a', 'PR:3:a'] } },
+      select: { erpRefId: true },
+    });
+    expect(res.outbox).toEqual({
+      newMails: 3,
+      alreadyQueued: 1,
+      duplicateRows: 1,
+      invalidRows: 1,
+      recipients: [
+        { email: 'a@x.com', mails: 2 },
+        { email: 'b@x.com', mails: 1 },
+        { email: 'boss@x.com', mails: 1 },
+      ],
+    });
   });
 
   it('maps ERP query failures to 422 ERP_QUERY_FAILED', async () => {

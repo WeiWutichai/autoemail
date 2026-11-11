@@ -19,7 +19,7 @@ export const KNOWN_COLUMNS: Record<SyncKind, readonly string[]> = {
 export const MIN_POLL_INTERVAL_SEC = 60;
 export const MAX_POLL_INTERVAL_SEC = 86_400;
 export const MAX_QUERY_LENGTH = 20_000;
-export const PREVIEW_ROW_LIMIT = 20;
+export const PREVIEW_ROW_LIMIT = 2000;
 
 const columnName = z
   .string()
@@ -129,12 +129,29 @@ export const queryPreviewInputSchema = z.object({
 });
 export type QueryPreviewInput = z.infer<typeof queryPreviewInputSchema>;
 
+/** Who an outbox query would mail on its next run (preview only, nothing is enqueued). */
+export const outboxPreviewSchema = z.object({
+  /** Mails the next run would enqueue (new `erp_ref_id`s with a valid recipient). */
+  newMails: z.number().int().nonnegative(),
+  /** `erp_ref_id`s already in the queue for this connection; they will not be sent again. */
+  alreadyQueued: z.number().int().nonnegative(),
+  /** Rows dropped for a duplicate `erp_ref_id` within the result. */
+  duplicateRows: z.number().int().nonnegative(),
+  /** Rows dropped for a missing id or a missing / invalid address. */
+  invalidRows: z.number().int().nonnegative(),
+  /** Every address (to, cc or bcc) of the new mails with its mail count, most first. */
+  recipients: z.array(z.object({ email: z.string(), mails: z.number().int().positive() })),
+});
+export type OutboxPreview = z.infer<typeof outboxPreviewSchema>;
+
 export const queryPreviewResultSchema = z.object({
   columns: z.array(z.string()),
   rows: z.array(z.record(z.unknown())),
   rowCount: z.number().int().nonnegative(),
   missingColumns: z.array(z.string()),
   durationMs: z.number().int().nonnegative(),
+  /** Set for outbox queries that have every required column; null otherwise. */
+  outbox: outboxPreviewSchema.nullable(),
 });
 export type QueryPreviewResult = z.infer<typeof queryPreviewResultSchema>;
 

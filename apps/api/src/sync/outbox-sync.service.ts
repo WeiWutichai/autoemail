@@ -33,6 +33,43 @@ export function parseAddresses(value: unknown): string[] | null {
 }
 
 /**
+ * Validates fetched rows and keeps the last row per `erp_ref_id`. Invalid rows are counted
+ * as errors and duplicate ids as skipped. Shared by the sync run and the query preview.
+ */
+export function parseOutboxRows(
+  rows: ErpRow[],
+  mapping: Record<string, string> | null,
+  counter: RunCounter,
+): OutboxRow[] {
+  const byRef = new Map<string, OutboxRow>();
+  rows.forEach((source, index) => {
+    const row = applyColumnMapping(source, mapping);
+    const erpRefId = cellText(row.erp_ref_id);
+    if (!erpRefId) return counter.error(`row ${index + 1}`, 'missing erp_ref_id');
+    if (erpRefId.length > 255)
+      return counter.error(`row ${index + 1}`, 'erp_ref_id longer than 255');
+    const ref = `erp_ref_id ${erpRefId}`;
+
+    const to = parseAddresses(row.to_email);
+    if (!to || to.length === 0) return counter.error(ref, 'missing or invalid to_email');
+    const cc = parseAddresses(row.cc);
+    const bcc = parseAddresses(row.bcc);
+    if (!cc || !bcc) return counter.error(ref, 'invalid cc / bcc');
+
+    if (byRef.has(erpRefId)) counter.skipped++;
+    byRef.set(erpRefId, {
+      erpRefId,
+      to,
+      cc,
+      bcc,
+      templateCode: cellText(row.template_code) || null,
+      variables: row,
+    });
+  });
+  return [...byRef.values()];
+}
+
+/**
  * Pulls rows that need a mail from the ERP and enqueues one `mail_queue` item per new
  * `(connection_id, erp_ref_id)`; rows already enqueued are skipped (sent once only).
  * Rendering happens here so the stored mail is exactly what will be sent.
@@ -77,32 +114,7 @@ export class OutboxSyncService {
     mapping: Record<string, string> | null,
     counter: RunCounter,
   ): OutboxRow[] {
-    const byRef = new Map<string, OutboxRow>();
-    rows.forEach((source, index) => {
-      const row = applyColumnMapping(source, mapping);
-      const erpRefId = cellText(row.erp_ref_id);
-      if (!erpRefId) return counter.error(`row ${index + 1}`, 'missing erp_ref_id');
-      if (erpRefId.length > 255)
-        return counter.error(`row ${index + 1}`, 'erp_ref_id longer than 255');
-      const ref = `erp_ref_id ${erpRefId}`;
-
-      const to = parseAddresses(row.to_email);
-      if (!to || to.length === 0) return counter.error(ref, 'missing or invalid to_email');
-      const cc = parseAddresses(row.cc);
-      const bcc = parseAddresses(row.bcc);
-      if (!cc || !bcc) return counter.error(ref, 'invalid cc / bcc');
-
-      if (byRef.has(erpRefId)) counter.skipped++;
-      byRef.set(erpRefId, {
-        erpRefId,
-        to,
-        cc,
-        bcc,
-        templateCode: cellText(row.template_code) || null,
-        variables: row,
-      });
-    });
-    return [...byRef.values()];
+    return parseOutboxRows(rows, mapping, counter);
   }
 
   private async enqueue(

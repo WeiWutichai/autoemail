@@ -8,6 +8,7 @@ import {
   PREVIEW_ROW_LIMIT,
   REQUIRED_COLUMNS,
   type CreateSyncConfigInput,
+  type OutboxPreview,
   type QueryPreviewInput,
   type QueryPreviewResult,
   type SyncConfigDto,
@@ -16,9 +17,11 @@ import {
 import { Prisma } from '@prisma/client';
 import { UnprocessableEntityException } from '@nestjs/common';
 import { assertSelectSql } from '../common/sql/sql-validator';
-import { applyColumnMapping } from '../erp/erp-rows';
+import { applyColumnMapping, type ErpRow } from '../erp/erp-rows';
 import { ErpDataSourceFactory, ErpQueryError } from '../erp/erp-datasource.factory';
 import { PrismaService } from '../prisma/prisma.service';
+import { parseOutboxRows } from './outbox-sync.service';
+import { chunk, RunCounter } from './run-result';
 import {
   SYNC_CONFIG_INCLUDE,
   toSyncConfigDto,
@@ -98,13 +101,51 @@ export class SyncConfigsService {
     }
     const mapped = rows.map((row) => applyColumnMapping(row, input.columnMapping));
     const columns = [...new Set(mapped.flatMap((row) => Object.keys(row)))];
+    const missingColumns =
+      mapped.length === 0 ? [] : REQUIRED_COLUMNS[input.kind].filter((c) => !columns.includes(c));
+    const outbox =
+      input.kind === 'OUTBOX' && missingColumns.length === 0
+        ? await this.previewOutbox(input.connectionId, mapped)
+        : null;
     return {
       columns,
       rows: mapped.slice(0, PREVIEW_ROW_LIMIT),
       rowCount: mapped.length,
-      missingColumns:
-        mapped.length === 0 ? [] : REQUIRED_COLUMNS[input.kind].filter((c) => !columns.includes(c)),
+      missingColumns,
       durationMs: Date.now() - started,
+      outbox,
+    };
+  }
+
+  /** Same parsing and dedup as the outbox run, then counts the mails per address. */
+  private async previewOutbox(connectionId: string, rows: ErpRow[]): Promise<OutboxPreview> {
+    const counter = new RunCounter();
+    const parsed = parseOutboxRows(rows, null, counter);
+    const known = new Set<string>();
+    for (const batch of chunk(parsed, 500)) {
+      const existing = await this.prisma.mailQueue.findMany({
+        where: { connectionId, erpRefId: { in: batch.map((r) => r.erpRefId) } },
+        select: { erpRefId: true },
+      });
+      existing.forEach((m) => m.erpRefId && known.add(m.erpRefId));
+    }
+    const counts = new Map<string, number>();
+    let newMails = 0;
+    for (const row of parsed) {
+      if (known.has(row.erpRefId)) continue;
+      newMails++;
+      for (const email of new Set([...row.to, ...row.cc, ...row.bcc])) {
+        counts.set(email, (counts.get(email) ?? 0) + 1);
+      }
+    }
+    return {
+      newMails,
+      alreadyQueued: parsed.length - newMails,
+      duplicateRows: counter.skipped,
+      invalidRows: counter.errors,
+      recipients: Array.from(counts, ([email, mails]) => ({ email, mails })).sort(
+        (a, b) => b.mails - a.mails || a.email.localeCompare(b.email),
+      ),
     };
   }
 
