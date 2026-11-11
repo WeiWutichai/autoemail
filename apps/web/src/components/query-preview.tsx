@@ -80,7 +80,7 @@ function OutboxRecipients({ outbox }: { outbox: OutboxPreview }) {
         </p>
       )}
       {outbox.recipients.length > 0 && (
-        <div className="max-h-60 overflow-auto rounded border bg-background">
+        <div className="max-h-[50vh] overflow-auto rounded border bg-background">
           <Table>
             <TableHeader>
               <TableRow>
@@ -155,7 +155,7 @@ export function QueryPreview({ preview }: { preview: QueryPreviewResult }) {
       )}
       {preview.outbox && <OutboxRecipients outbox={preview.outbox} />}
       {preview.rows.length > 0 && (
-        <div className="max-h-72 overflow-auto">
+        <div className="max-h-[70vh] overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
