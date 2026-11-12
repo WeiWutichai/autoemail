@@ -2,6 +2,7 @@ import type { SmtpConfig } from '@prisma/client';
 import type { CryptoService } from '../common/crypto/crypto.service';
 import {
   classifySmtpError,
+  ehloName,
   MailerService,
   SmtpSendError,
   type TransportFactory,
@@ -61,6 +62,7 @@ describe('MailerService', () => {
       port: 587,
       secure: false,
       auth: { user: 'noreply@example.com', pass: 'app-pass' },
+      name: 'example.com',
       pool: true,
     });
     expect(transports[0].sendMail.mock.calls[0][0]).toMatchObject({
@@ -114,6 +116,12 @@ describe('classifySmtpError', () => {
     const e = classifySmtpError(err);
     expect(e).toBeInstanceOf(SmtpSendError);
     expect(e.permanent).toBe(permanent);
+  });
+
+  it('greets with the sender domain, never a bare address', () => {
+    expect(ehloName('sale@KRS.co.th')).toBe('krs.co.th');
+    expect(ehloName('root@localhost')).toBeUndefined();
+    expect(ehloName('broken')).toBeUndefined();
   });
 
   it('removes the password from the message', () => {

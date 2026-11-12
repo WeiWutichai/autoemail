@@ -61,6 +61,16 @@ export function classifySmtpError(err: unknown, password?: string): SmtpSendErro
   return new SmtpSendError(message, permanent, code);
 }
 
+/**
+ * Host name sent in EHLO. Nodemailer falls back to "[127.0.0.1]" when the machine name has no
+ * dot (always the case in Docker), which Google's SMTP relay intermittently rejects with
+ * "421 4.7.0 Try again later (EHLO)". The sender's domain is a valid name the relay accepts.
+ */
+export function ehloName(fromEmail: string): string | undefined {
+  const domain = fromEmail.split('@')[1]?.trim().toLowerCase();
+  return domain && domain.includes('.') ? domain : undefined;
+}
+
 /** One pooled Nodemailer transport per SMTP config, rebuilt when the config changes. */
 @Injectable()
 export class MailerService implements OnModuleDestroy {
@@ -132,6 +142,7 @@ export class MailerService implements OnModuleDestroy {
       port: smtp.port,
       secure: smtp.secure,
       auth: smtp.username ? { user: smtp.username, pass } : undefined,
+      name: ehloName(smtp.fromEmail),
       connectionTimeout: 15_000,
       greetingTimeout: 10_000,
       socketTimeout: 30_000,
