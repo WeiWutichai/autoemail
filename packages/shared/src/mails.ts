@@ -5,6 +5,16 @@ export const MAIL_STATUSES = ['PENDING', 'SENDING', 'SENT', 'FAILED', 'DEAD', 'C
 export const mailStatusSchema = z.enum(MAIL_STATUSES);
 export type MailStatus = z.infer<typeof mailStatusSchema>;
 
+/** Statuses of mails that are still on their way out (the "waiting" dashboard count). */
+export const WAITING_MAIL_STATUSES = [
+  'PENDING',
+  'SENDING',
+  'FAILED',
+] as const satisfies readonly MailStatus[];
+/** List filter: one status, or WAITING for every status in {@link WAITING_MAIL_STATUSES}. */
+export const mailStatusFilterSchema = z.union([mailStatusSchema, z.literal('WAITING')]);
+export type MailStatusFilter = z.infer<typeof mailStatusFilterSchema>;
+
 export const MAIL_EVENTS = [
   'QUEUED',
   'SENDING',
@@ -60,7 +70,7 @@ const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 const optionalDate = z.preprocess(emptyToUndefined, z.coerce.date().optional());
 
 export const mailListQuerySchema = paginationQuerySchema.extend({
-  status: z.preprocess(emptyToUndefined, mailStatusSchema.optional()),
+  status: z.preprocess(emptyToUndefined, mailStatusFilterSchema.optional()),
   connectionId: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
   templateId: z.preprocess(emptyToUndefined, z.string().uuid().optional()),
   /** Inclusive lower bound on created time. */

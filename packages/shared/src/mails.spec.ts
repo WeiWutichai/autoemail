@@ -14,6 +14,10 @@ describe('mailListQuerySchema', () => {
     expect(parsed.q).toBe('buyer@example.com');
   });
 
+  it('accepts WAITING as a group of statuses', () => {
+    expect(mailListQuerySchema.parse({ status: 'WAITING' }).status).toBe('WAITING');
+  });
+
   it('rejects unknown statuses', () => {
     expect(mailListQuerySchema.safeParse({ status: 'LOST' }).success).toBe(false);
   });

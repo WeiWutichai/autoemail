@@ -7,6 +7,7 @@ import type {
   MailSummaryDto,
   Paginated,
 } from '@erp-mail/shared';
+import { WAITING_MAIL_STATUSES } from '@erp-mail/shared';
 import type { MailLog, MailQueue, Prisma } from '@prisma/client';
 import type { BaseEnv } from '../config/env';
 import { startOfDayInZone } from '../delivery/time';
@@ -62,7 +63,11 @@ export class MailsService {
   async list(query: MailListQuery): Promise<Paginated<MailSummaryDto>> {
     const q = query.q;
     const where: Prisma.MailQueueWhereInput = {
-      ...(query.status ? { status: query.status } : {}),
+      ...(query.status === 'WAITING'
+        ? { status: { in: [...WAITING_MAIL_STATUSES] } }
+        : query.status
+          ? { status: query.status }
+          : {}),
       ...(query.connectionId ? { connectionId: query.connectionId } : {}),
       ...(query.templateId ? { templateId: query.templateId } : {}),
       ...(query.from || query.to
@@ -146,7 +151,7 @@ export class MailsService {
     const [sentToday, failedToday, waiting, dead, smtpConfigs, sentBySmtp] = await Promise.all([
       this.prisma.mailQueue.count({ where: { status: 'SENT', sentAt: { gte: since } } }),
       this.prisma.mailLog.count({ where: { event: 'FAILED', createdAt: { gte: since } } }),
-      this.prisma.mailQueue.count({ where: { status: { in: ['PENDING', 'FAILED', 'SENDING'] } } }),
+      this.prisma.mailQueue.count({ where: { status: { in: [...WAITING_MAIL_STATUSES] } } }),
       this.prisma.mailQueue.count({ where: { status: 'DEAD' } }),
       this.prisma.smtpConfig.findMany({ orderBy: [{ isDefault: 'desc' }, { name: 'asc' }] }),
       this.prisma.mailQueue.groupBy({

@@ -71,6 +71,14 @@ describe('MailsService', () => {
     expect(args.skip).toBe(10);
   });
 
+  it('expands the WAITING filter to every not-yet-sent status', async () => {
+    const { prisma, service } = setup();
+    await service.list({ page: 1, pageSize: 10, status: 'WAITING' });
+    expect(prisma.mailQueue.findMany.mock.calls[0][0].where.status).toEqual({
+      in: ['PENDING', 'SENDING', 'FAILED'],
+    });
+  });
+
   it('returns detail with logs and flags removed content', async () => {
     const { service } = setup();
     const detail = await service.get('q1');

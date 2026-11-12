@@ -1,6 +1,11 @@
 'use client';
 
-import { MAIL_STATUSES, type MailEvent, type MailStatus } from '@erp-mail/shared';
+import {
+  MAIL_STATUSES,
+  type MailEvent,
+  type MailStatus,
+  type MailStatusFilter,
+} from '@erp-mail/shared';
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
@@ -68,9 +73,26 @@ function StatusBadge({ status }: { status: MailStatus }) {
   return <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>;
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <Card>
+function Stat({
+  label,
+  value,
+  hint,
+  active = false,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  active?: boolean;
+  /** Set for cards that filter the table below. */
+  onClick?: () => void;
+}) {
+  const body = (
+    <Card
+      className={`h-full ${onClick ? 'transition-colors hover:border-primary' : ''} ${
+        active ? 'border-primary ring-1 ring-primary' : ''
+      }`}
+    >
       <CardHeader className="pb-1">
         <CardTitle className="text-sm font-normal text-muted-foreground">{label}</CardTitle>
       </CardHeader>
@@ -80,18 +102,79 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
       </CardContent>
     </Card>
   );
+  if (!onClick) return body;
+  return (
+    <button type="button" className="text-left" aria-pressed={active} onClick={onClick}>
+      {body}
+    </button>
+  );
 }
 
-function Dashboard() {
+/** Today as yyyy-mm-dd in the browser's time zone (the format of the date filters). */
+function today(): string {
+  const d = new Date();
+  const pad = (v: number) => String(v).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** The table filter each clickable card applies. */
+const CARD_FILTERS = {
+  sent: () => ({ status: 'SENT' as const, from: today(), to: today() }),
+  waiting: () => ({ status: 'WAITING' as const, from: '', to: '' }),
+  dead: () => ({ status: 'DEAD' as const, from: '', to: '' }),
+};
+type CardKey = keyof typeof CARD_FILTERS;
+
+function cardOf(f: MailFilters): CardKey | null {
+  const key = (Object.keys(CARD_FILTERS) as CardKey[]).find((k) => {
+    const want = CARD_FILTERS[k]();
+    return f.status === want.status && f.from === want.from && f.to === want.to;
+  });
+  return key ?? null;
+}
+
+function Dashboard({
+  filters,
+  onFilter,
+}: {
+  filters: MailFilters;
+  onFilter: (patch: Partial<MailFilters>) => void;
+}) {
   const { data } = useMailStats();
   const n = (v: number | undefined) => (v === undefined ? '—' : v.toLocaleString('th-TH'));
   const quota = data?.quotas.find((q) => q.isDefault) ?? data?.quotas[0];
+  const active = cardOf(filters);
+  // Clicking the active card again clears its filter.
+  const pick = (key: CardKey) => () =>
+    onFilter(active === key ? { status: '', from: '', to: '' } : CARD_FILTERS[key]());
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-      <Stat label="ส่งสำเร็จวันนี้" value={n(data?.sentToday)} />
-      <Stat label="ส่งล้มเหลววันนี้ (ครั้ง)" value={n(data?.failedToday)} />
-      <Stat label="รอส่ง" value={n(data?.waiting)} hint="รวมที่รอลองใหม่" />
-      <Stat label="ส่งไม่สำเร็จ (DEAD)" value={n(data?.dead)} hint="กด Retry ได้" />
+      <Stat
+        label="ส่งสำเร็จวันนี้"
+        value={n(data?.sentToday)}
+        hint="กดเพื่อดูรายการ"
+        active={active === 'sent'}
+        onClick={pick('sent')}
+      />
+      <Stat
+        label="ส่งล้มเหลววันนี้ (ครั้ง)"
+        value={n(data?.failedToday)}
+        hint="นับทุกครั้งที่ลองส่ง"
+      />
+      <Stat
+        label="รอส่ง"
+        value={n(data?.waiting)}
+        hint="รวมกำลังส่งและรอลองใหม่ · กดเพื่อดูรายการ"
+        active={active === 'waiting'}
+        onClick={pick('waiting')}
+      />
+      <Stat
+        label="ส่งไม่สำเร็จ (DEAD)"
+        value={n(data?.dead)}
+        hint="กดเพื่อดูรายการและ Retry"
+        active={active === 'dead'}
+        onClick={pick('dead')}
+      />
       <Stat
         label="โควตาวันนี้"
         value={quota ? `${n(quota.used)} / ${n(quota.limit)}` : '—'}
@@ -265,16 +348,17 @@ export default function LogsPage() {
         </p>
       </div>
 
-      <Dashboard />
+      <Dashboard filters={filters} onFilter={setFilter} />
 
       <div className="flex flex-wrap items-end gap-3">
         <NativeSelect
-          className="w-40"
+          className="w-52"
           aria-label="สถานะ"
           value={filters.status}
-          onChange={(e) => setFilter({ status: e.target.value as MailStatus | '' })}
+          onChange={(e) => setFilter({ status: e.target.value as MailStatusFilter | '' })}
         >
           <option value="">ทุกสถานะ</option>
+          <option value="WAITING">รอส่งทั้งหมด (รวมรอลองใหม่)</option>
           {MAIL_STATUSES.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABELS[s]}

@@ -2,7 +2,7 @@ import type {
   AuditLogDto,
   MailDetailDto,
   MailStatsDto,
-  MailStatus,
+  MailStatusFilter,
   MailSummaryDto,
   Paginated,
   PdpaEraseResult,
@@ -13,7 +13,7 @@ import { api } from './api-client';
 const KEY = ['mails'] as const;
 
 export interface MailFilters {
-  status: MailStatus | '';
+  status: MailStatusFilter | '';
   connectionId: string;
   templateId: string;
   /** yyyy-mm-dd (local), inclusive */
